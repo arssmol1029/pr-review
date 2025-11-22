@@ -19,11 +19,19 @@ func NewuserRepository(db *sql.DB) service.UserRepository {
 func (r *userRepository) GetUserByID(ctx context.Context, id string) (*models.User, error) {
 	const op = "SQLite.GetUserByID"
 
+	exists, err := r.UserExists(ctx, id)
+	if err != nil {
+		return nil, errors.WrapError(op, err)
+	}
+	if !exists {
+		return nil, errors.WrapError(op, errors.ErrUserNotFound)
+	}
+
 	query := `SELECT user_id, username, is_active, team_name FROM users WHERE user_id = ?`
 	row := r.db.QueryRowContext(ctx, query, id)
 
 	var user models.User
-	err := row.Scan(&user.UserID, &user.Username, &user.IsActive, &user.TeamName)
+	err = row.Scan(&user.UserID, &user.Username, &user.IsActive, &user.TeamName)
 	if err == sql.ErrNoRows {
 		return nil, errors.WrapError(op, errors.ErrUserNotFound)
 	}
@@ -54,6 +62,14 @@ func (r *userRepository) GetUserByUsername(ctx context.Context, username string)
 
 func (r *userRepository) SetUserActive(ctx context.Context, userID string, isActive bool) error {
 	const op = "SQLite.SetUserActive"
+
+	exists, err := r.UserExists(ctx, userID)
+	if err != nil {
+		return errors.WrapError(op, err)
+	}
+	if !exists {
+		return errors.WrapError(op, errors.ErrUserNotFound)
+	}
 
 	query := `UPDATE users SET is_active = ? WHERE user_id = ?`
 	result, err := r.db.ExecContext(ctx, query, isActive, userID)
