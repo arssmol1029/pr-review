@@ -10,6 +10,7 @@ type Database interface {
 	Init(ctx context.Context) error
 	Close() error
 	Ping(ctx context.Context) error
+	GetRepositories() *Repositories
 }
 
 type UserRepository interface {
