@@ -12,7 +12,7 @@ type teamRepository struct {
 	db *sql.DB
 }
 
-func NewteamRepository(db *sql.DB) service.TeamRepository {
+func NewTeamRepository(db *sql.DB) service.TeamRepository {
 	return &teamRepository{db: db}
 }
 

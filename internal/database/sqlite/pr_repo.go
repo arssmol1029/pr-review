@@ -14,7 +14,7 @@ type prRepository struct {
 	db *sql.DB
 }
 
-func NewprRepository(db *sql.DB) service.PRRepository {
+func NewPRRepository(db *sql.DB) service.PRRepository {
 	return &prRepository{db: db}
 }
 
