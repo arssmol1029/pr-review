@@ -12,8 +12,8 @@ type userRepository struct {
 	db *sql.DB
 }
 
-func NewUserRepository(db *sql.DB) service.UserRepository {
-	return &userRepository{db: db}
+func NewUserRepository(s *SQLiteDatabase) service.UserRepository {
+	return &userRepository{db: s.db}
 }
 
 func (r *userRepository) GetUserByID(ctx context.Context, id string) (*models.User, error) {

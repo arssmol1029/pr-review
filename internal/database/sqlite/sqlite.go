@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 type SQLiteDatabase struct {
@@ -22,7 +22,7 @@ func New(storagePath string) *SQLiteDatabase {
 func (s *SQLiteDatabase) Init(ctx context.Context) error {
 	const op = "SQLiteDatabase.Init"
 
-	db, err := sql.Open("sqlite3", s.path)
+	db, err := sql.Open("sqlite", s.path)
 	if err != nil {
 		return fmt.Errorf("%s: failed to open database: %w", op, err)
 	}

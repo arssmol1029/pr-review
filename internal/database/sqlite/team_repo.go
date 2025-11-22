@@ -12,8 +12,8 @@ type teamRepository struct {
 	db *sql.DB
 }
 
-func NewTeamRepository(db *sql.DB) service.TeamRepository {
-	return &teamRepository{db: db}
+func NewTeamRepository(s *SQLiteDatabase) service.TeamRepository {
+	return &teamRepository{db: s.db}
 }
 
 func (r *teamRepository) CreateTeam(ctx context.Context, team *models.Team) error {

@@ -14,8 +14,8 @@ type prRepository struct {
 	db *sql.DB
 }
 
-func NewPRRepository(db *sql.DB) service.PRRepository {
-	return &prRepository{db: db}
+func NewPRRepository(s *SQLiteDatabase) service.PRRepository {
+	return &prRepository{db: s.db}
 }
 
 func (r *prRepository) CreatePR(ctx context.Context, pr *models.PullRequestShort) error {
