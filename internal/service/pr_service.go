@@ -1,29 +1,32 @@
 package service
 
 import (
+	"context"
 	"log/slog"
-	"pr-review/internal/database"
+	"pr-review/internal/database/models"
+	"time"
 )
 
-type PRService interface{}
+type PRRepository interface {
+	CreatePR(ctx context.Context, pr *models.PullRequestShort) error
+	GetPRByID(ctx context.Context, id string) (*models.PullRequest, error)
+	MergePR(ctx context.Context, prID string, mergedAt time.Time) error
+	ReassignReviewer(ctx context.Context, prID, oldUserID string) (*string, error)
+	PRExists(ctx context.Context, prID string) (bool, error)
+}
 
-type prService struct {
-	logger   *slog.Logger
-	userRepo *database.UserRepository
-	teamRepo *database.TeamRepository
-	prRepo   *database.PRRepository
+type PRService struct {
+	logger *slog.Logger
+	prRepo PRRepository
 }
 
 func NewPRService(
 	logger *slog.Logger,
-	userRepo *database.UserRepository,
-	teamRepo *database.TeamRepository,
-	prRepo *database.PRRepository,
-) PRService {
-	return &prService{
-		logger:   logger,
-		userRepo: userRepo,
-		teamRepo: teamRepo,
-		prRepo:   prRepo,
+	prRepo PRRepository,
+) *PRService {
+	return &PRService{
+		logger: logger,
+
+		prRepo: prRepo,
 	}
 }

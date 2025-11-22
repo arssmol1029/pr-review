@@ -1,26 +1,28 @@
 package service
 
 import (
+	"context"
 	"log/slog"
-	"pr-review/internal/database"
+	"pr-review/internal/database/models"
 )
 
-type TeamService interface{}
+type TeamRepository interface {
+	CreateTeam(ctx context.Context, team *models.Team) error
+	GetTeamByName(ctx context.Context, name string) (*models.Team, error)
+	TeamExists(ctx context.Context, teamName string) (bool, error)
+}
 
-type teamService struct {
+type TeamService struct {
 	logger   *slog.Logger
-	userRepo *database.UserRepository
-	teamRepo *database.TeamRepository
+	teamRepo TeamRepository
 }
 
 func NewTeamService(
 	logger *slog.Logger,
-	userRepo *database.UserRepository,
-	teamRepo *database.TeamRepository,
-) TeamService {
-	return &teamService{
+	teamRepo TeamRepository,
+) *TeamService {
+	return &TeamService{
 		logger:   logger,
-		userRepo: userRepo,
 		teamRepo: teamRepo,
 	}
 }
