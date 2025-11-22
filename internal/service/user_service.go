@@ -19,7 +19,7 @@ type userService struct {
 	repo   UserRepository
 }
 
-func NewuserService(
+func NewUserService(
 	logger *slog.Logger,
 	repo UserRepository,
 ) handlers.UserService {

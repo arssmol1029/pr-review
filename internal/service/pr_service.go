@@ -21,7 +21,7 @@ type prService struct {
 	repo   PRRepository
 }
 
-func NewprService(
+func NewPRService(
 	logger *slog.Logger,
 	repo PRRepository,
 ) handlers.PRService {

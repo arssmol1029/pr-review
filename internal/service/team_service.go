@@ -19,7 +19,7 @@ type teamService struct {
 	repo   TeamRepository
 }
 
-func NewteamService(
+func NewTeamService(
 	logger *slog.Logger,
 	repo TeamRepository,
 ) handlers.TeamService {
