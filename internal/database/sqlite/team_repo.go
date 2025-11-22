@@ -3,8 +3,8 @@ package sqlite
 import (
 	"context"
 	"database/sql"
-	"pr-review/internal/database"
-	"pr-review/internal/database/models"
+	"pr-review/internal/errors"
+	"pr-review/internal/models"
 )
 
 type TeamRepository struct {
@@ -16,52 +16,52 @@ func NewTeamRepository(db *sql.DB) *TeamRepository {
 }
 
 func (r *TeamRepository) CreateTeam(ctx context.Context, team *models.Team) error {
-	const op = "CreateTeam"
+	const op = "SQLite.CreateTeam"
 
 	exists, err := r.TeamExists(ctx, team.Name)
 	if err != nil {
-		return database.WrapError(op, err)
+		return errors.WrapError(op, err)
 	}
 	if exists {
-		return database.WrapError(op, database.ErrTeamExists)
+		return errors.WrapError(op, errors.ErrTeamExists)
 	}
 
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
-		return database.WrapError(op, err)
+		return errors.WrapError(op, err)
 	}
 	defer tx.Rollback()
 
 	query := `INSERT INTO teams (name) VALUES (?)`
 	_, err = tx.ExecContext(ctx, query, team.Name)
 	if err != nil {
-		return database.WrapError(op, err)
+		return errors.WrapError(op, err)
 	}
 
 	userQuery := `INSERT INTO users (user_id, username, is_active, team_name) VALUES (?, ?, ?, ?)`
 	for _, member := range team.Members {
 		_, err := tx.ExecContext(ctx, userQuery, member.UserID, member.Username, member.IsActive, team.Name)
 		if err != nil {
-			return database.WrapError(op, err)
+			return errors.WrapError(op, err)
 		}
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return database.WrapError(op, err)
+		return errors.WrapError(op, err)
 	}
 	return nil
 }
 
 func (r *TeamRepository) GetTeamByName(ctx context.Context, name string) (*models.Team, error) {
-	const op = "GetTeamByName"
+	const op = "SQLite.GetTeamByName"
 
 	exists, err := r.TeamExists(ctx, name)
 	if err != nil {
-		return nil, database.WrapError(op, err)
+		return nil, errors.WrapError(op, err)
 	}
 	if !exists {
-		return nil, database.WrapError(op, database.ErrTeamNotFound)
+		return nil, errors.WrapError(op, errors.ErrTeamNotFound)
 	}
 
 	query := `
@@ -72,7 +72,7 @@ func (r *TeamRepository) GetTeamByName(ctx context.Context, name string) (*model
 	`
 	rows, err := r.db.QueryContext(ctx, query, name)
 	if err != nil {
-		return nil, database.WrapError(op, err)
+		return nil, errors.WrapError(op, err)
 	}
 	defer rows.Close()
 
@@ -81,13 +81,13 @@ func (r *TeamRepository) GetTeamByName(ctx context.Context, name string) (*model
 		var member models.TeamMember
 		err := rows.Scan(&member.UserID, &member.Username, &member.IsActive)
 		if err != nil {
-			return nil, database.WrapError(op, err)
+			return nil, errors.WrapError(op, err)
 		}
 		members = append(members, member)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, database.WrapError(op, err)
+		return nil, errors.WrapError(op, err)
 	}
 
 	team := &models.Team{
@@ -99,7 +99,7 @@ func (r *TeamRepository) GetTeamByName(ctx context.Context, name string) (*model
 }
 
 func (r *TeamRepository) TeamExists(ctx context.Context, teamName string) (bool, error) {
-	const op = "TeamExists"
+	const op = "SQLite.TeamExists"
 
 	query := `SELECT 1 FROM teams WHERE name = ?`
 	row := r.db.QueryRowContext(ctx, query, teamName)
@@ -110,7 +110,7 @@ func (r *TeamRepository) TeamExists(ctx context.Context, teamName string) (bool,
 		return false, nil
 	}
 	if err != nil {
-		return false, database.WrapError(op, err)
+		return false, errors.WrapError(op, err)
 	}
 
 	return true, nil

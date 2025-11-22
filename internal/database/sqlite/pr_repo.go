@@ -4,8 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"math/rand"
-	"pr-review/internal/database"
-	"pr-review/internal/database/models"
+	"pr-review/internal/errors"
+	"pr-review/internal/models"
 	"time"
 )
 
@@ -18,38 +18,38 @@ func NewPRRepository(db *sql.DB) *PRRepository {
 }
 
 func (r *PRRepository) CreatePR(ctx context.Context, pr *models.PullRequestShort) error {
-	const op = "CreatePR"
+	const op = "SQLite.CreatePR"
 
 	exists, err := r.PRExists(ctx, pr.ID)
 	if err != nil {
-		return database.WrapError(op, err)
+		return errors.WrapError(op, err)
 	}
 	if exists {
-		return database.WrapError(op, database.ErrPRExists)
+		return errors.WrapError(op, errors.ErrPRExists)
 	}
 
 	authorTeam, err := r.getUserTeam(ctx, pr.AuthorID)
 	if err != nil {
-		return database.WrapError(op, err)
+		return errors.WrapError(op, err)
 	}
 
 	availableReviewers, err := r.getActiveTeamMembers(ctx, authorTeam, pr.AuthorID, nil)
 	if err != nil {
-		return database.WrapError(op, err)
+		return errors.WrapError(op, err)
 	}
 
 	selectedReviewers := r.selectRandomReviewers(availableReviewers, 2)
 
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
-		return database.WrapError(op, err)
+		return errors.WrapError(op, err)
 	}
 	defer tx.Rollback()
 
 	query := `INSERT INTO pull_requests (id, name, author_id, status, created_at) VALUES (?, ?, ?, 'OPEN', ?)`
 	_, err = tx.ExecContext(ctx, query, pr.ID, pr.Name, pr.AuthorID, time.Now())
 	if err != nil {
-		return database.WrapError(op, err)
+		return errors.WrapError(op, err)
 	}
 
 	if len(selectedReviewers) > 0 {
@@ -57,21 +57,21 @@ func (r *PRRepository) CreatePR(ctx context.Context, pr *models.PullRequestShort
 		for _, reviewerID := range selectedReviewers {
 			_, err := tx.ExecContext(ctx, reviewersQuery, pr.ID, reviewerID)
 			if err != nil {
-				return database.WrapError(op, err)
+				return errors.WrapError(op, err)
 			}
 		}
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return database.WrapError(op, err)
+		return errors.WrapError(op, err)
 	}
 
 	return nil
 }
 
 func (r *PRRepository) GetPRByID(ctx context.Context, id string) (*models.PullRequest, error) {
-	const op = "GetPRByID"
+	const op = "SQLite.GetPRByID"
 
 	query := `SELECT id, name, author_id, status, created_at, merged_at FROM pull_requests WHERE id = ?`
 	row := r.db.QueryRowContext(ctx, query, id)
@@ -81,10 +81,10 @@ func (r *PRRepository) GetPRByID(ctx context.Context, id string) (*models.PullRe
 
 	err := row.Scan(&pr.ID, &pr.Name, &pr.AuthorID, &pr.Status, &pr.CreatedAt, &mergedAt)
 	if err == sql.ErrNoRows {
-		return nil, database.WrapError(op, database.ErrPRNotFound)
+		return nil, errors.WrapError(op, errors.ErrPRNotFound)
 	}
 	if err != nil {
-		return nil, database.WrapError(op, err)
+		return nil, errors.WrapError(op, err)
 	}
 
 	if mergedAt.Valid {
@@ -93,7 +93,7 @@ func (r *PRRepository) GetPRByID(ctx context.Context, id string) (*models.PullRe
 
 	reviewers, err := r.getPRReviewers(ctx, id)
 	if err != nil {
-		return nil, database.WrapError(op, err)
+		return nil, errors.WrapError(op, err)
 	}
 	pr.AssignedReviewers = reviewers
 
@@ -101,101 +101,101 @@ func (r *PRRepository) GetPRByID(ctx context.Context, id string) (*models.PullRe
 }
 
 func (r *PRRepository) MergePR(ctx context.Context, prID string, mergedAt time.Time) error {
-	const op = "MergePR"
+	const op = "SQLite.MergePR"
 
 	pr, err := r.GetPRByID(ctx, prID)
 	if err != nil {
-		return database.WrapError(op, err)
+		return errors.WrapError(op, err)
 	}
 	if pr.Status == "MERGED" {
-		return database.WrapError(op, database.ErrPRMerged)
+		return errors.WrapError(op, errors.ErrPRMerged)
 	}
 
 	query := `UPDATE pull_requests SET status = 'MERGED', merged_at = ? WHERE id = ?`
 	result, err := r.db.ExecContext(ctx, query, mergedAt, prID)
 	if err != nil {
-		return database.WrapError(op, err)
+		return errors.WrapError(op, err)
 	}
 
 	rows, err := result.RowsAffected()
 	if err != nil {
-		return database.WrapError(op, err)
+		return errors.WrapError(op, err)
 	}
 	if rows == 0 {
-		return database.WrapError(op, database.ErrPRNotFound)
+		return errors.WrapError(op, errors.ErrPRNotFound)
 	}
 
 	return nil
 }
 
 func (r *PRRepository) ReassignReviewer(ctx context.Context, prID, oldUserID string) (*string, error) {
-	const op = "ReassignReviewer"
+	const op = "SQLite.ReassignReviewer"
 
 	pr, err := r.GetPRByID(ctx, prID)
 	if err != nil {
-		return nil, database.WrapError(op, err)
+		return nil, errors.WrapError(op, err)
 	}
 	if pr.Status == "MERGED" {
-		return nil, database.WrapError(op, database.ErrPRMerged)
+		return nil, errors.WrapError(op, errors.ErrPRMerged)
 	}
 
 	isAssigned, err := r.IsReviewerAssigned(ctx, prID, oldUserID)
 	if err != nil {
-		return nil, database.WrapError(op, err)
+		return nil, errors.WrapError(op, err)
 	}
 	if !isAssigned {
-		return nil, database.WrapError(op, database.ErrNotAssigned)
+		return nil, errors.WrapError(op, errors.ErrNotAssigned)
 	}
 
 	authorTeam, err := r.getUserTeam(ctx, pr.AuthorID)
 	if err != nil {
-		return nil, database.WrapError(op, err)
+		return nil, errors.WrapError(op, err)
 	}
 
 	currentReviewers := pr.AssignedReviewers
 
 	availableReviewers, err := r.getActiveTeamMembers(ctx, authorTeam, oldUserID, currentReviewers)
 	if err != nil {
-		return nil, database.WrapError(op, err)
+		return nil, errors.WrapError(op, err)
 	}
 
 	if len(availableReviewers) == 0 {
-		return nil, database.WrapError(op, database.ErrNoCandidate)
+		return nil, errors.WrapError(op, errors.ErrNoCandidate)
 	}
 
 	selectedReviewers := r.selectRandomReviewers(availableReviewers, 1)
 	if len(selectedReviewers) == 0 {
-		return nil, database.WrapError(op, database.ErrNoCandidate)
+		return nil, errors.WrapError(op, errors.ErrNoCandidate)
 	}
 	reviewerID := selectedReviewers[0]
 
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
-		return nil, database.WrapError(op, err)
+		return nil, errors.WrapError(op, err)
 	}
 	defer tx.Rollback()
 
 	deleteQuery := `DELETE FROM pr_reviewers WHERE pr_id = ? AND user_id = ?`
 	_, err = tx.ExecContext(ctx, deleteQuery, prID, oldUserID)
 	if err != nil {
-		return nil, database.WrapError(op, err)
+		return nil, errors.WrapError(op, err)
 	}
 
 	insertQuery := `INSERT INTO pr_reviewers (pr_id, user_id) VALUES (?, ?)`
 	_, err = tx.ExecContext(ctx, insertQuery, prID, reviewerID)
 	if err != nil {
-		return nil, database.WrapError(op, err)
+		return nil, errors.WrapError(op, err)
 	}
 
 	if err = tx.Commit(); err != nil {
-		return nil, database.WrapError(op, err)
+		return nil, errors.WrapError(op, err)
 	}
 
 	return &reviewerID, nil
 }
 
 func (r *PRRepository) PRExists(ctx context.Context, prID string) (bool, error) {
-	const op = "PRExists"
+	const op = "SQLite.PRExists"
 
 	query := `SELECT 1 FROM pull_requests WHERE id = ?`
 	row := r.db.QueryRowContext(ctx, query, prID)
@@ -206,14 +206,14 @@ func (r *PRRepository) PRExists(ctx context.Context, prID string) (bool, error) 
 		return false, nil
 	}
 	if err != nil {
-		return false, database.WrapError(op, err)
+		return false, errors.WrapError(op, err)
 	}
 
 	return true, nil
 }
 
 func (r *PRRepository) IsReviewerAssigned(ctx context.Context, prID, userID string) (bool, error) {
-	const op = "IsReviewerAssigned"
+	const op = "SQLite.IsReviewerAssigned"
 
 	query := `SELECT 1 FROM pr_reviewers WHERE pr_id = ? AND user_id = ?`
 	row := r.db.QueryRowContext(ctx, query, prID, userID)
@@ -224,7 +224,7 @@ func (r *PRRepository) IsReviewerAssigned(ctx context.Context, prID, userID stri
 		return false, nil
 	}
 	if err != nil {
-		return false, database.WrapError(op, err)
+		return false, errors.WrapError(op, err)
 	}
 
 	return true, nil
@@ -233,12 +233,12 @@ func (r *PRRepository) IsReviewerAssigned(ctx context.Context, prID, userID stri
 // private methods
 
 func (r *PRRepository) getPRReviewers(ctx context.Context, prID string) ([]string, error) {
-	const op = "getPRReviewers"
+	const op = "SQLite.getPRReviewers"
 
 	query := `SELECT user_id FROM pr_reviewers WHERE pr_id = ? ORDER BY user_id`
 	rows, err := r.db.QueryContext(ctx, query, prID)
 	if err != nil {
-		return nil, database.WrapError(op, err)
+		return nil, errors.WrapError(op, err)
 	}
 	defer rows.Close()
 
@@ -247,20 +247,20 @@ func (r *PRRepository) getPRReviewers(ctx context.Context, prID string) ([]strin
 		var userID string
 		err := rows.Scan(&userID)
 		if err != nil {
-			return nil, database.WrapError(op, err)
+			return nil, errors.WrapError(op, err)
 		}
 		reviewers = append(reviewers, userID)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, database.WrapError(op, err)
+		return nil, errors.WrapError(op, err)
 	}
 
 	return reviewers, nil
 }
 
 func (r *PRRepository) getUserTeam(ctx context.Context, userID string) (string, error) {
-	const op = "getUserTeam"
+	const op = "SQLite.getUserTeam"
 
 	query := `SELECT team_name FROM users WHERE user_id = ?`
 	row := r.db.QueryRowContext(ctx, query, userID)
@@ -268,17 +268,17 @@ func (r *PRRepository) getUserTeam(ctx context.Context, userID string) (string, 
 	var teamName string
 	err := row.Scan(&teamName)
 	if err == sql.ErrNoRows {
-		return "", database.ErrUserNotFound
+		return "", errors.ErrUserNotFound
 	}
 	if err != nil {
-		return "", database.WrapError(op, err)
+		return "", errors.WrapError(op, err)
 	}
 
 	return teamName, nil
 }
 
 func (r *PRRepository) getActiveTeamMembers(ctx context.Context, teamName string, excludeUserID string, excludeReviewers []string) ([]string, error) {
-	const op = "getActiveTeamMembers"
+	const op = "SQLite.getActiveTeamMembers"
 
 	excludeMap := make(map[string]bool)
 	for _, reviewer := range excludeReviewers {
@@ -293,7 +293,7 @@ func (r *PRRepository) getActiveTeamMembers(ctx context.Context, teamName string
 	`
 	rows, err := r.db.QueryContext(ctx, query, teamName, excludeUserID)
 	if err != nil {
-		return nil, database.WrapError(op, err)
+		return nil, errors.WrapError(op, err)
 	}
 	defer rows.Close()
 
@@ -302,7 +302,7 @@ func (r *PRRepository) getActiveTeamMembers(ctx context.Context, teamName string
 		var userID string
 		err := rows.Scan(&userID)
 		if err != nil {
-			return nil, database.WrapError(op, err)
+			return nil, errors.WrapError(op, err)
 		}
 		if !excludeMap[userID] {
 			members = append(members, userID)
@@ -310,7 +310,7 @@ func (r *PRRepository) getActiveTeamMembers(ctx context.Context, teamName string
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, database.WrapError(op, err)
+		return nil, errors.WrapError(op, err)
 	}
 
 	return members, nil

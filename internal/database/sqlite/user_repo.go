@@ -3,8 +3,8 @@ package sqlite
 import (
 	"context"
 	"database/sql"
-	"pr-review/internal/database"
-	"pr-review/internal/database/models"
+	"pr-review/internal/errors"
+	"pr-review/internal/models"
 )
 
 type UserRepository struct {
@@ -16,7 +16,7 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 }
 
 func (r *UserRepository) GetUserByID(ctx context.Context, id string) (*models.User, error) {
-	const op = "GetUserByID"
+	const op = "SQLite.GetUserByID"
 
 	query := `SELECT user_id, username, is_active, team_name FROM users WHERE user_id = ?`
 	row := r.db.QueryRowContext(ctx, query, id)
@@ -24,17 +24,17 @@ func (r *UserRepository) GetUserByID(ctx context.Context, id string) (*models.Us
 	var user models.User
 	err := row.Scan(&user.UserID, &user.Username, &user.IsActive, &user.TeamName)
 	if err == sql.ErrNoRows {
-		return nil, database.WrapError(op, database.ErrUserNotFound)
+		return nil, errors.WrapError(op, errors.ErrUserNotFound)
 	}
 	if err != nil {
-		return nil, database.WrapError(op, err)
+		return nil, errors.WrapError(op, err)
 	}
 
 	return &user, nil
 }
 
 func (r *UserRepository) GetUserByUsername(ctx context.Context, username string) (*models.User, error) {
-	const op = "GetUserByUsername"
+	const op = "SQLite.GetUserByUsername"
 
 	query := `SELECT user_id, username, is_active, team_name FROM users WHERE username = ?`
 	row := r.db.QueryRowContext(ctx, query, username)
@@ -42,44 +42,44 @@ func (r *UserRepository) GetUserByUsername(ctx context.Context, username string)
 	var user models.User
 	err := row.Scan(&user.UserID, &user.Username, &user.IsActive, &user.TeamName)
 	if err == sql.ErrNoRows {
-		return nil, database.WrapError(op, database.ErrUserNotFound)
+		return nil, errors.WrapError(op, errors.ErrUserNotFound)
 	}
 	if err != nil {
-		return nil, database.WrapError(op, err)
+		return nil, errors.WrapError(op, err)
 	}
 
 	return &user, nil
 }
 
 func (r *UserRepository) SetUserActive(ctx context.Context, userID string, isActive bool) error {
-	const op = "SetUserActive"
+	const op = "SQLite.SetUserActive"
 
 	query := `UPDATE users SET is_active = ? WHERE user_id = ?`
 	result, err := r.db.ExecContext(ctx, query, isActive, userID)
 	if err != nil {
-		return database.WrapError(op, err)
+		return errors.WrapError(op, err)
 	}
 
 	rows, err := result.RowsAffected()
 	if err != nil {
-		return database.WrapError(op, err)
+		return errors.WrapError(op, err)
 	}
 	if rows == 0 {
-		return database.WrapError(op, database.ErrUserNotFound)
+		return errors.WrapError(op, errors.ErrUserNotFound)
 	}
 
 	return nil
 }
 
 func (r *UserRepository) GetPRsByReviewer(ctx context.Context, userID string) ([]*models.PullRequestShort, error) {
-	const op = "GetPRsByReviewer"
+	const op = "SQLite.GetPRsByReviewer"
 
 	exists, err := r.UserExists(ctx, userID)
 	if err != nil {
-		return nil, database.WrapError(op, err)
+		return nil, errors.WrapError(op, err)
 	}
 	if !exists {
-		return nil, database.WrapError(op, database.ErrUserNotFound)
+		return nil, errors.WrapError(op, errors.ErrUserNotFound)
 	}
 
 	query := `
@@ -92,7 +92,7 @@ func (r *UserRepository) GetPRsByReviewer(ctx context.Context, userID string) ([
 
 	rows, err := r.db.QueryContext(ctx, query, userID)
 	if err != nil {
-		return nil, database.WrapError(op, err)
+		return nil, errors.WrapError(op, err)
 	}
 	defer rows.Close()
 
@@ -101,20 +101,20 @@ func (r *UserRepository) GetPRsByReviewer(ctx context.Context, userID string) ([
 		var pr models.PullRequestShort
 		err := rows.Scan(&pr.ID, &pr.Name, &pr.AuthorID, &pr.Status)
 		if err != nil {
-			return nil, database.WrapError(op, err)
+			return nil, errors.WrapError(op, err)
 		}
 		prs = append(prs, &pr)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, database.WrapError(op, err)
+		return nil, errors.WrapError(op, err)
 	}
 
 	return prs, nil
 }
 
 func (r *UserRepository) UserExists(ctx context.Context, userID string) (bool, error) {
-	const op = "UserExists"
+	const op = "SQLite.UserExists"
 
 	query := `SELECT 1 FROM users WHERE user_id = ?`
 	row := r.db.QueryRowContext(ctx, query, userID)
@@ -125,7 +125,7 @@ func (r *UserRepository) UserExists(ctx context.Context, userID string) (bool, e
 		return false, nil
 	}
 	if err != nil {
-		return false, database.WrapError(op, err)
+		return false, errors.WrapError(op, err)
 	}
 
 	return true, nil

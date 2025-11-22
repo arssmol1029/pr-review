@@ -1,6 +1,9 @@
-package database
+package errors
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 var (
 	ErrUserNotFound = errors.New("user not found")
@@ -14,5 +17,5 @@ var (
 )
 
 func WrapError(op string, err error) error {
-	return errors.New(op + ": " + err.Error())
+	return fmt.Errorf("%s: %w", op, err)
 }
