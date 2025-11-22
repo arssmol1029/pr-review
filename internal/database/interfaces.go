@@ -17,7 +17,7 @@ type UserRepository interface {
 	GetUserByID(ctx context.Context, id string) (*models.User, error)
 	GetUserByUsername(ctx context.Context, username string) (*models.User, error)
 	SetUserActive(ctx context.Context, userID string, isActive bool) error
-	GetPRsByReviewer(ctx context.Context, userID string) ([]*models.PullRequest, error)
+	GetPRsByReviewer(ctx context.Context, userID string) ([]*models.PullRequestShort, error)
 	UserExists(ctx context.Context, userID string) (bool, error)
 }
 
@@ -28,10 +28,10 @@ type TeamRepository interface {
 }
 
 type PRRepository interface {
-	CreatePR(ctx context.Context, pr *models.PullRequest) error
+	CreatePR(ctx context.Context, pr *models.PullRequestShort) error
 	GetPRByID(ctx context.Context, id string) (*models.PullRequest, error)
 	MergePR(ctx context.Context, prID string, mergedAt time.Time) error
-	ReassignReviewer(ctx context.Context, prID, userID string) error
+	ReassignReviewer(ctx context.Context, prID, oldUserID string) (*string, error)
 	PRExists(ctx context.Context, prID string) (bool, error)
 }
 
