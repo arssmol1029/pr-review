@@ -13,6 +13,7 @@ type PRRepository interface {
 	MergePR(ctx context.Context, prID string, mergedAt time.Time) error
 	ReassignReviewer(ctx context.Context, prID, oldUserID string) (*string, error)
 	PRExists(ctx context.Context, prID string) (bool, error)
+	IsReviewerAssigned(ctx context.Context, prID, userID string) (bool, error)
 }
 
 type PRService struct {
