@@ -5,17 +5,18 @@ import (
 	"database/sql"
 	"pr-review/internal/errors"
 	"pr-review/internal/models"
+	"pr-review/internal/service"
 )
 
-type TeamRepository struct {
+type teamRepository struct {
 	db *sql.DB
 }
 
-func NewTeamRepository(db *sql.DB) *TeamRepository {
-	return &TeamRepository{db: db}
+func NewteamRepository(db *sql.DB) service.TeamRepository {
+	return &teamRepository{db: db}
 }
 
-func (r *TeamRepository) CreateTeam(ctx context.Context, team *models.Team) error {
+func (r *teamRepository) CreateTeam(ctx context.Context, team *models.Team) error {
 	const op = "SQLite.CreateTeam"
 
 	exists, err := r.TeamExists(ctx, team.Name)
@@ -53,7 +54,7 @@ func (r *TeamRepository) CreateTeam(ctx context.Context, team *models.Team) erro
 	return nil
 }
 
-func (r *TeamRepository) GetTeamByName(ctx context.Context, name string) (*models.Team, error) {
+func (r *teamRepository) GetTeamByName(ctx context.Context, name string) (*models.Team, error) {
 	const op = "SQLite.GetTeamByName"
 
 	exists, err := r.TeamExists(ctx, name)
@@ -98,7 +99,7 @@ func (r *TeamRepository) GetTeamByName(ctx context.Context, name string) (*model
 	return team, nil
 }
 
-func (r *TeamRepository) TeamExists(ctx context.Context, teamName string) (bool, error) {
+func (r *teamRepository) TeamExists(ctx context.Context, teamName string) (bool, error) {
 	const op = "SQLite.TeamExists"
 
 	query := `SELECT 1 FROM teams WHERE name = ?`

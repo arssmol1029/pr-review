@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"pr-review/internal/errors"
 	"pr-review/internal/models"
+	"pr-review/internal/server/handlers"
 )
 
 type TeamRepository interface {
@@ -13,31 +14,31 @@ type TeamRepository interface {
 	TeamExists(ctx context.Context, teamName string) (bool, error)
 }
 
-type TeamService struct {
-	logger   *slog.Logger
-	teamRepo TeamRepository
+type teamService struct {
+	logger *slog.Logger
+	repo   TeamRepository
 }
 
-func NewTeamService(
+func NewteamService(
 	logger *slog.Logger,
-	teamRepo TeamRepository,
-) *TeamService {
-	return &TeamService{
-		logger:   logger,
-		teamRepo: teamRepo,
+	repo TeamRepository,
+) handlers.TeamService {
+	return &teamService{
+		logger: logger,
+		repo:   repo,
 	}
 }
 
-func (s *TeamService) CreateTeam(ctx context.Context, team *models.Team) (*models.Team, error) {
-	const op = "TeamService.CreateTeam"
+func (s *teamService) CreateTeam(ctx context.Context, team *models.Team) (*models.Team, error) {
+	const op = "teamService.CreateTeam"
 
-	err := s.teamRepo.CreateTeam(ctx, team)
+	err := s.repo.CreateTeam(ctx, team)
 	if err != nil {
 		s.logger.Error("failed to create team", "op", op, "error", err, "teamName", team.Name)
 		return nil, errors.WrapError(op, err)
 	}
 
-	createdTeam, err := s.teamRepo.GetTeamByName(ctx, team.Name)
+	createdTeam, err := s.repo.GetTeamByName(ctx, team.Name)
 	if err != nil {
 		s.logger.Error("failed to get created team", "op", op, "error", err, "teamName", team.Name)
 		return nil, errors.WrapError(op, err)
@@ -46,10 +47,10 @@ func (s *TeamService) CreateTeam(ctx context.Context, team *models.Team) (*model
 	return createdTeam, nil
 }
 
-func (s *TeamService) GetTeam(ctx context.Context, teamName string) (*models.Team, error) {
-	const op = "TeamService.GetTeam"
+func (s *teamService) GetTeam(ctx context.Context, teamName string) (*models.Team, error) {
+	const op = "teamService.GetTeam"
 
-	team, err := s.teamRepo.GetTeamByName(ctx, teamName)
+	team, err := s.repo.GetTeamByName(ctx, teamName)
 	if err != nil {
 		s.logger.Error("failed to get team", "op", op, "error", err, "teamName", teamName)
 		return nil, errors.WrapError(op, err)

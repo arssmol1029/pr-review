@@ -1,15 +1,22 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
-	"pr-review/internal/service"
+	"pr-review/internal/models"
 )
 
-type PRHandler struct {
-	service *service.PRService
+type PRService interface {
+	CreatePR(ctx context.Context, pr *models.PullRequestShort) (*models.PullRequest, error)
+	MergePR(ctx context.Context, prID string) (*models.PullRequest, error)
+	ReassignReviewer(ctx context.Context, prID, oldUserID string) (*models.PullRequest, *string, error)
 }
 
-func NewPRHandler(s *service.PRService) *PRHandler {
+type PRHandler struct {
+	service PRService
+}
+
+func NewPRHandler(s PRService) *PRHandler {
 	return &PRHandler{service: s}
 }
 

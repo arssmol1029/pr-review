@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"pr-review/internal/errors"
 	"pr-review/internal/models"
+	"pr-review/internal/server/handlers"
 	"time"
 )
 
@@ -15,31 +16,31 @@ type PRRepository interface {
 	ReassignReviewer(ctx context.Context, prID, oldUserID string) (*string, error)
 }
 
-type PRService struct {
+type prService struct {
 	logger *slog.Logger
-	prRepo PRRepository
+	repo   PRRepository
 }
 
-func NewPRService(
+func NewprService(
 	logger *slog.Logger,
-	prRepo PRRepository,
-) *PRService {
-	return &PRService{
+	repo PRRepository,
+) handlers.PRService {
+	return &prService{
 		logger: logger,
-		prRepo: prRepo,
+		repo:   repo,
 	}
 }
 
-func (s *PRService) CreatePR(ctx context.Context, pr *models.PullRequestShort) (*models.PullRequest, error) {
-	const op = "PRService.CreatePR"
+func (s *prService) CreatePR(ctx context.Context, pr *models.PullRequestShort) (*models.PullRequest, error) {
+	const op = "prService.CreatePR"
 
-	err := s.prRepo.CreatePR(ctx, pr)
+	err := s.repo.CreatePR(ctx, pr)
 	if err != nil {
 		s.logger.Error("failed to create PR", "op", op, "error", err, "prID", pr.ID)
 		return nil, errors.WrapError(op, err)
 	}
 
-	createdPR, err := s.prRepo.GetPRByID(ctx, pr.ID)
+	createdPR, err := s.repo.GetPRByID(ctx, pr.ID)
 	if err != nil {
 		s.logger.Error("failed to get created PR", "op", op, "error", err, "prID", pr.ID)
 		return nil, errors.WrapError(op, err)
@@ -48,16 +49,16 @@ func (s *PRService) CreatePR(ctx context.Context, pr *models.PullRequestShort) (
 	return createdPR, nil
 }
 
-func (s *PRService) MergePR(ctx context.Context, prID string) (*models.PullRequest, error) {
-	const op = "PRService.MergePR"
+func (s *prService) MergePR(ctx context.Context, prID string) (*models.PullRequest, error) {
+	const op = "prService.MergePR"
 
-	err := s.prRepo.MergePR(ctx, prID, time.Now())
+	err := s.repo.MergePR(ctx, prID, time.Now())
 	if err != nil {
 		s.logger.Error("failed to merge PR", "op", op, "error", err, "prID", prID)
 		return nil, errors.WrapError(op, err)
 	}
 
-	mergedPR, err := s.prRepo.GetPRByID(ctx, prID)
+	mergedPR, err := s.repo.GetPRByID(ctx, prID)
 	if err != nil {
 		s.logger.Error("failed to get merged PR", "op", op, "error", err, "prID", prID)
 		return nil, errors.WrapError(op, err)
@@ -66,16 +67,16 @@ func (s *PRService) MergePR(ctx context.Context, prID string) (*models.PullReque
 	return mergedPR, nil
 }
 
-func (s *PRService) ReassignReviewer(ctx context.Context, prID, oldUserID string) (*models.PullRequest, *string, error) {
-	const op = "PRService.ReassignReviewer"
+func (s *prService) ReassignReviewer(ctx context.Context, prID, oldUserID string) (*models.PullRequest, *string, error) {
+	const op = "prService.ReassignReviewer"
 
-	newUserID, err := s.prRepo.ReassignReviewer(ctx, prID, oldUserID)
+	newUserID, err := s.repo.ReassignReviewer(ctx, prID, oldUserID)
 	if err != nil {
 		s.logger.Error("failed to reassign reviewer", "op", op, "error", err, "prID", prID, "oldUserID", oldUserID)
 		return nil, nil, errors.WrapError(op, err)
 	}
 
-	updatedPR, err := s.prRepo.GetPRByID(ctx, prID)
+	updatedPR, err := s.repo.GetPRByID(ctx, prID)
 	if err != nil {
 		s.logger.Error("failed to get updated PR", "op", op, "error", err, "prID", prID)
 		return nil, nil, errors.WrapError(op, err)

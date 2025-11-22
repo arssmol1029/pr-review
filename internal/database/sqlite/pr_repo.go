@@ -6,18 +6,19 @@ import (
 	"math/rand"
 	"pr-review/internal/errors"
 	"pr-review/internal/models"
+	"pr-review/internal/service"
 	"time"
 )
 
-type PRRepository struct {
+type prRepository struct {
 	db *sql.DB
 }
 
-func NewPRRepository(db *sql.DB) *PRRepository {
-	return &PRRepository{db: db}
+func NewprRepository(db *sql.DB) service.PRRepository {
+	return &prRepository{db: db}
 }
 
-func (r *PRRepository) CreatePR(ctx context.Context, pr *models.PullRequestShort) error {
+func (r *prRepository) CreatePR(ctx context.Context, pr *models.PullRequestShort) error {
 	const op = "SQLite.CreatePR"
 
 	exists, err := r.PRExists(ctx, pr.ID)
@@ -70,7 +71,7 @@ func (r *PRRepository) CreatePR(ctx context.Context, pr *models.PullRequestShort
 	return nil
 }
 
-func (r *PRRepository) GetPRByID(ctx context.Context, id string) (*models.PullRequest, error) {
+func (r *prRepository) GetPRByID(ctx context.Context, id string) (*models.PullRequest, error) {
 	const op = "SQLite.GetPRByID"
 
 	query := `SELECT id, name, author_id, status, created_at, merged_at FROM pull_requests WHERE id = ?`
@@ -100,7 +101,7 @@ func (r *PRRepository) GetPRByID(ctx context.Context, id string) (*models.PullRe
 	return &pr, nil
 }
 
-func (r *PRRepository) MergePR(ctx context.Context, prID string, mergedAt time.Time) error {
+func (r *prRepository) MergePR(ctx context.Context, prID string, mergedAt time.Time) error {
 	const op = "SQLite.MergePR"
 
 	pr, err := r.GetPRByID(ctx, prID)
@@ -128,7 +129,7 @@ func (r *PRRepository) MergePR(ctx context.Context, prID string, mergedAt time.T
 	return nil
 }
 
-func (r *PRRepository) ReassignReviewer(ctx context.Context, prID, oldUserID string) (*string, error) {
+func (r *prRepository) ReassignReviewer(ctx context.Context, prID, oldUserID string) (*string, error) {
 	const op = "SQLite.ReassignReviewer"
 
 	pr, err := r.GetPRByID(ctx, prID)
@@ -194,7 +195,7 @@ func (r *PRRepository) ReassignReviewer(ctx context.Context, prID, oldUserID str
 	return &reviewerID, nil
 }
 
-func (r *PRRepository) PRExists(ctx context.Context, prID string) (bool, error) {
+func (r *prRepository) PRExists(ctx context.Context, prID string) (bool, error) {
 	const op = "SQLite.PRExists"
 
 	query := `SELECT 1 FROM pull_requests WHERE id = ?`
@@ -212,7 +213,7 @@ func (r *PRRepository) PRExists(ctx context.Context, prID string) (bool, error) 
 	return true, nil
 }
 
-func (r *PRRepository) IsReviewerAssigned(ctx context.Context, prID, userID string) (bool, error) {
+func (r *prRepository) IsReviewerAssigned(ctx context.Context, prID, userID string) (bool, error) {
 	const op = "SQLite.IsReviewerAssigned"
 
 	query := `SELECT 1 FROM pr_reviewers WHERE pr_id = ? AND user_id = ?`
@@ -232,7 +233,7 @@ func (r *PRRepository) IsReviewerAssigned(ctx context.Context, prID, userID stri
 
 // private methods
 
-func (r *PRRepository) getPRReviewers(ctx context.Context, prID string) ([]string, error) {
+func (r *prRepository) getPRReviewers(ctx context.Context, prID string) ([]string, error) {
 	const op = "SQLite.getPRReviewers"
 
 	query := `SELECT user_id FROM pr_reviewers WHERE pr_id = ? ORDER BY user_id`
@@ -259,7 +260,7 @@ func (r *PRRepository) getPRReviewers(ctx context.Context, prID string) ([]strin
 	return reviewers, nil
 }
 
-func (r *PRRepository) getUserTeam(ctx context.Context, userID string) (string, error) {
+func (r *prRepository) getUserTeam(ctx context.Context, userID string) (string, error) {
 	const op = "SQLite.getUserTeam"
 
 	query := `SELECT team_name FROM users WHERE user_id = ?`
@@ -277,7 +278,7 @@ func (r *PRRepository) getUserTeam(ctx context.Context, userID string) (string, 
 	return teamName, nil
 }
 
-func (r *PRRepository) getActiveTeamMembers(ctx context.Context, teamName string, excludeUserID string, excludeReviewers []string) ([]string, error) {
+func (r *prRepository) getActiveTeamMembers(ctx context.Context, teamName string, excludeUserID string, excludeReviewers []string) ([]string, error) {
 	const op = "SQLite.getActiveTeamMembers"
 
 	excludeMap := make(map[string]bool)
@@ -316,7 +317,7 @@ func (r *PRRepository) getActiveTeamMembers(ctx context.Context, teamName string
 	return members, nil
 }
 
-func (r *PRRepository) selectRandomReviewers(reviewers []string, maxCount int) []string {
+func (r *prRepository) selectRandomReviewers(reviewers []string, maxCount int) []string {
 	if len(reviewers) == 0 {
 		return nil
 	}

@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"pr-review/internal/errors"
 	"pr-review/internal/models"
+	"pr-review/internal/server/handlers"
 )
 
 type UserRepository interface {
@@ -13,32 +14,32 @@ type UserRepository interface {
 	GetPRsByReviewer(ctx context.Context, userID string) ([]*models.PullRequestShort, error)
 }
 
-type UserService struct {
-	logger   *slog.Logger
-	userRepo UserRepository
+type userService struct {
+	logger *slog.Logger
+	repo   UserRepository
 }
 
-func NewUserService(
+func NewuserService(
 	logger *slog.Logger,
-	userRepo UserRepository,
-) *UserService {
-	return &UserService{
-		logger:   logger,
-		userRepo: userRepo,
+	repo UserRepository,
+) handlers.UserService {
+	return &userService{
+		logger: logger,
+		repo:   repo,
 	}
 }
 
-func (s *UserService) SetUserActive(ctx context.Context, userID string, isActive bool) (*models.User, error) {
-	const op = "UserService.SetUserActive"
+func (s *userService) SetUserActive(ctx context.Context, userID string, isActive bool) (*models.User, error) {
+	const op = "userService.SetUserActive"
 
-	err := s.userRepo.SetUserActive(ctx, userID, isActive)
+	err := s.repo.SetUserActive(ctx, userID, isActive)
 	if err != nil {
 		err = errors.WrapError(op, err)
 		s.logger.Error("failed to set user active", "error", err, "userID", userID, "isActive", isActive)
 		return nil, err
 	}
 
-	user, err := s.userRepo.GetUserByID(ctx, userID)
+	user, err := s.repo.GetUserByID(ctx, userID)
 	if err != nil {
 		err = errors.WrapError(op, err)
 		s.logger.Error("failed to get updated user", "error", err, "userID", userID)
@@ -48,10 +49,10 @@ func (s *UserService) SetUserActive(ctx context.Context, userID string, isActive
 	return user, nil
 }
 
-func (s *UserService) GetUserReviewPRs(ctx context.Context, userID string) ([]*models.PullRequestShort, error) {
-	const op = "UserService.GetUserReviewPRs"
+func (s *userService) GetUserReviewPRs(ctx context.Context, userID string) ([]*models.PullRequestShort, error) {
+	const op = "userService.GetUserReviewPRs"
 
-	prs, err := s.userRepo.GetPRsByReviewer(ctx, userID)
+	prs, err := s.repo.GetPRsByReviewer(ctx, userID)
 	if err != nil {
 		err = errors.WrapError(op, err)
 		s.logger.Error("failed to get user review PRs", "error", err, "userID", userID)

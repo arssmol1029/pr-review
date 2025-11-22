@@ -1,15 +1,21 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
-	"pr-review/internal/service"
+	"pr-review/internal/models"
 )
 
-type UserHandler struct {
-	service *service.UserService
+type UserService interface {
+	SetUserActive(ctx context.Context, userID string, isActive bool) (*models.User, error)
+	GetUserReviewPRs(ctx context.Context, userID string) ([]*models.PullRequestShort, error)
 }
 
-func NewUserHandler(s *service.UserService) *UserHandler {
+type UserHandler struct {
+	service UserService
+}
+
+func NewUserHandler(s UserService) *UserHandler {
 	return &UserHandler{service: s}
 }
 
