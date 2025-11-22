@@ -120,12 +120,12 @@ func (r *prRepository) GetPRByID(ctx context.Context, id string) (*models.PullRe
 func (r *prRepository) MergePR(ctx context.Context, prID string, mergedAt time.Time) error {
 	const op = "SQLite.MergePR"
 
-	pr, err := r.GetPRByID(ctx, prID)
+	exists, err := r.PRExists(ctx, prID)
 	if err != nil {
 		return errors.WrapError(op, err)
 	}
-	if pr.Status == "MERGED" {
-		return errors.WrapError(op, errors.ErrPRMerged)
+	if !exists {
+		return errors.WrapError(op, errors.ErrPRNotFound)
 	}
 
 	query := `UPDATE pull_requests SET status = 'MERGED', merged_at = ? WHERE id = ?`
