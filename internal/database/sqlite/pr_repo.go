@@ -29,6 +29,14 @@ func (r *prRepository) CreatePR(ctx context.Context, pr *models.PullRequestShort
 		return errors.WrapError(op, errors.ErrPRExists)
 	}
 
+	exists, err = r.userExists(ctx, pr.AuthorID)
+	if err != nil {
+		return errors.WrapError(op, err)
+	}
+	if !exists {
+		return errors.WrapError(op, errors.ErrUserNotFound)
+	}
+
 	authorTeam, err := r.getUserTeam(ctx, pr.AuthorID)
 	if err != nil {
 		return errors.WrapError(op, err)
@@ -74,13 +82,21 @@ func (r *prRepository) CreatePR(ctx context.Context, pr *models.PullRequestShort
 func (r *prRepository) GetPRByID(ctx context.Context, id string) (*models.PullRequest, error) {
 	const op = "SQLite.GetPRByID"
 
+	exists, err := r.PRExists(ctx, id)
+	if err != nil {
+		return nil, errors.WrapError(op, err)
+	}
+	if !exists {
+		return nil, errors.WrapError(op, errors.ErrPRNotFound)
+	}
+
 	query := `SELECT id, name, author_id, status, created_at, merged_at FROM pull_requests WHERE id = ?`
 	row := r.db.QueryRowContext(ctx, query, id)
 
 	var pr models.PullRequest
 	var mergedAt sql.NullTime
 
-	err := row.Scan(&pr.ID, &pr.Name, &pr.AuthorID, &pr.Status, &pr.CreatedAt, &mergedAt)
+	err = row.Scan(&pr.ID, &pr.Name, &pr.AuthorID, &pr.Status, &pr.CreatedAt, &mergedAt)
 	if err == sql.ErrNoRows {
 		return nil, errors.WrapError(op, errors.ErrPRNotFound)
 	}
@@ -138,6 +154,14 @@ func (r *prRepository) ReassignReviewer(ctx context.Context, prID, oldUserID str
 	}
 	if pr.Status == "MERGED" {
 		return nil, errors.WrapError(op, errors.ErrPRMerged)
+	}
+
+	exists, err := r.userExists(ctx, oldUserID)
+	if err != nil {
+		return nil, errors.WrapError(op, err)
+	}
+	if !exists {
+		return nil, errors.WrapError(op, errors.ErrUserNotFound)
 	}
 
 	isAssigned, err := r.IsReviewerAssigned(ctx, prID, oldUserID)
@@ -276,6 +300,24 @@ func (r *prRepository) getUserTeam(ctx context.Context, userID string) (string, 
 	}
 
 	return teamName, nil
+}
+
+func (r *prRepository) userExists(ctx context.Context, userID string) (bool, error) {
+	const op = "SQLite.UserExists"
+
+	query := `SELECT 1 FROM users WHERE user_id = ?`
+	row := r.db.QueryRowContext(ctx, query, userID)
+
+	var exists int
+	err := row.Scan(&exists)
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+	if err != nil {
+		return false, errors.WrapError(op, err)
+	}
+
+	return true, nil
 }
 
 func (r *prRepository) getActiveTeamMembers(ctx context.Context, teamName string, excludeUserID string, excludeReviewers []string) ([]string, error) {
