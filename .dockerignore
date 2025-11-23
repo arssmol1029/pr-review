@@ -1,0 +1,13 @@
+.git
+.gitignore
+.dockerignore
+README.md
+Dockerfile
+docker-compose.yml
+Makefile
+.env
+*.db
+*.log
+data/
+.idea/
+.vscode/
