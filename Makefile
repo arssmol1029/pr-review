@@ -23,6 +23,8 @@ lint:
 run: build up
 	@echo "Service is starting..."
 
+restart: down run
+
 health:
 	curl -f http://localhost:8080/health || echo "❌ Service is not ready"
 
