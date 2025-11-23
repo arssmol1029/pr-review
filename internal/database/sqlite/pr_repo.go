@@ -119,7 +119,7 @@ func (r *SQLiteRepository) MergePR(ctx context.Context, prID string, mergedAt ti
 		return errors.WrapError(op, errors.ErrPRNotFound)
 	}
 
-	query := `UPDATE pull_requests SET status = 'MERGED', merged_at = ? WHERE id = ?`
+	query := `UPDATE pull_requests SET status = 'MERGED', merged_at = ? WHERE id = ? AND status = 'OPEN'`
 	result, err := r.db.ExecContext(ctx, query, mergedAt, prID)
 	if err != nil {
 		return errors.WrapError(op, err)
