@@ -125,12 +125,9 @@ func (r *SQLiteRepository) MergePR(ctx context.Context, prID string, mergedAt ti
 		return errors.WrapError(op, err)
 	}
 
-	rows, err := result.RowsAffected()
+	_, err = result.RowsAffected()
 	if err != nil {
 		return errors.WrapError(op, err)
-	}
-	if rows == 0 {
-		return errors.WrapError(op, errors.ErrPRNotFound)
 	}
 
 	return nil
