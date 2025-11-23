@@ -17,6 +17,7 @@ import (
 type UserService interface {
 	SetUserActive(ctx context.Context, userID string, isActive bool) (*models.User, error)
 	GetUserReviewPRs(ctx context.Context, userID string) ([]*models.PullRequestShort, error)
+	GetUserStats(ctx context.Context, userID string) (*models.UserStats, error)
 }
 
 type UserHandler struct {
@@ -155,6 +156,71 @@ func (h *UserHandler) GetReview(w http.ResponseWriter, r *http.Request) {
 			Status:   pr.Status,
 		}
 		res.PullRequests = append(res.PullRequests, prRes)
+	}
+
+	// validate := validator.New()
+	// if err := validate.Struct(res); err != nil {
+	// 	log.Error("Response validation failed", "error", err)
+	// 	render.Status(r, http.StatusInternalServerError)
+	// 	render.JSON(w, r, response.ERROR("VALIDATION_ERROR", "wrong response format"))
+	// 	return
+	// }
+
+	render.Status(r, http.StatusOK)
+	render.JSON(w, r, res)
+}
+
+// GET users/stats
+func (h *UserHandler) Stats(w http.ResponseWriter, r *http.Request) {
+	const op = "UserHandlers.Stats"
+
+	log := h.logger.With(
+		slog.String("op", op),
+		slog.String("request_id", middleware.GetReqID(r.Context())),
+	)
+
+	userID := r.URL.Query().Get("user_id")
+	if userID == "" {
+		log.Error("Missing userID parameter")
+		render.Status(r, http.StatusBadRequest)
+		render.JSON(w, r, response.ERROR("INVALID_REQUEST", "user_id query parameter is required"))
+		return
+	}
+
+	stats, err := h.service.GetUserStats(r.Context(), userID)
+	if errors.Is(err, serviceErrors.ErrUserNotFound) {
+		log.Error("User not found", "error", err, "userID", userID)
+		render.Status(r, http.StatusNotFound)
+		render.JSON(w, r, response.NOT_FOUND("user not found"))
+		return
+	}
+	if err != nil {
+		log.Error("Failed to get user stats", "error", err, "userID", userID)
+		render.Status(r, http.StatusInternalServerError)
+		render.JSON(w, r, response.ERROR("INTERNAL_ERROR", "failed to get user review PRs"))
+		return
+	}
+
+	type StatsItem struct {
+		UserID        string `json:"user_id" validate:"required"`
+		Username      string `json:"username" validate:"required"`
+		TeamName      string `json:"team_name" validate:"required"`
+		OpenReviews   int    `json:"open_assignments" validate:"required"`
+		MergedReviews int    `json:"merged_assignments" validate:"required"`
+		CreatedPRs    int    `json:"created_prs" validate:"required"`
+	}
+
+	res := struct {
+		Stats StatsItem `json:"user_stats" validate:"required"`
+	}{
+		Stats: StatsItem{
+			UserID:        stats.UserID,
+			Username:      stats.Username,
+			TeamName:      stats.TeamName,
+			OpenReviews:   stats.OpenReviews,
+			MergedReviews: stats.MergedReviews,
+			CreatedPRs:    stats.CreatedPRs,
+		},
 	}
 
 	// validate := validator.New()

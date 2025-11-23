@@ -127,6 +127,78 @@ func (r *teamRepository) TeamExists(ctx context.Context, teamName string) (bool,
 	return true, nil
 }
 
+func (r *teamRepository) GetPRsCntByTeam(ctx context.Context, teamName string) (int, error) {
+	const op = "SQLite.GetPRsCntByTeam"
+
+	exists, err := r.TeamExists(ctx, teamName)
+	if err != nil {
+		return 0, errors.WrapError(op, err)
+	}
+	if !exists {
+		return 0, errors.WrapError(op, errors.ErrTeamNotFound)
+	}
+
+	query := `
+		SELECT COUNT(pr.id) as prs_authored
+		FROM users u
+		LEFT JOIN pull_requests pr ON u.user_id = pr.author_id
+		WHERE u.team_name = ?
+		LIMIT 1
+	`
+
+	row := r.db.QueryRowContext(ctx, query, teamName)
+
+	var count int
+	err = row.Scan(&count)
+	if err == sql.ErrNoRows {
+		return 0, errors.WrapError(op, errors.ErrTeamNotFound)
+	}
+	if err != nil {
+		return 0, errors.WrapError(op, err)
+	}
+
+	return count, nil
+}
+
+func (r *teamRepository) GetAvgReviewersPerPR(ctx context.Context, teamName string) (float64, error) {
+	const op = "SQLite.GetPRsCntByTeam"
+
+	exists, err := r.TeamExists(ctx, teamName)
+	if err != nil {
+		return 0, errors.WrapError(op, err)
+	}
+	if !exists {
+		return 0, errors.WrapError(op, errors.ErrTeamNotFound)
+	}
+
+	query := `
+		SELECT 
+			ROUND(
+				CAST(COUNT(prr.user_id) AS FLOAT) / 
+				NULLIF(COUNT(DISTINCT pr.id), 0), 
+				2
+			) as avg_reviewers_per_pr
+		FROM users u
+		LEFT JOIN pull_requests pr ON u.user_id = pr.author_id
+		LEFT JOIN pr_reviewers prr ON pr.id = prr.pr_id
+		WHERE u.team_name = ?
+		LIMIT 1
+	`
+
+	row := r.db.QueryRowContext(ctx, query, teamName)
+
+	var count float64
+	err = row.Scan(&count)
+	if err == sql.ErrNoRows {
+		return 0, errors.WrapError(op, errors.ErrTeamNotFound)
+	}
+	if err != nil {
+		return 0, errors.WrapError(op, err)
+	}
+
+	return count, nil
+}
+
 // private methods
 
 func (r *teamRepository) userExists(ctx context.Context, userID, username string) (bool, error) {

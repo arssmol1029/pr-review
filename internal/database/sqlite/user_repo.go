@@ -103,7 +103,7 @@ func (r *userRepository) GetPRsByReviewer(ctx context.Context, userID string) ([
 		SELECT pr.id, pr.name, pr.author_id, pr.status
 		FROM pull_requests pr
 		JOIN pr_reviewers prr ON pr.id = prr.pr_id
-		WHERE prr.user_id = ? AND pr.status = 'OPEN'
+		WHERE prr.user_id = ?
 		ORDER BY pr.created_at DESC
 	`
 
@@ -128,6 +128,37 @@ func (r *userRepository) GetPRsByReviewer(ctx context.Context, userID string) ([
 	}
 
 	return prs, nil
+}
+
+func (r *userRepository) GetPRsCntByAuthor(ctx context.Context, userID string) (int, error) {
+	const op = "SQLite.GetPRsCntByAuthor"
+
+	exists, err := r.UserExists(ctx, userID)
+	if err != nil {
+		return 0, errors.WrapError(op, err)
+	}
+	if !exists {
+		return 0, errors.WrapError(op, errors.ErrUserNotFound)
+	}
+
+	query := `
+		SELECT COUNT(*)
+		FROM pull_requests 
+		WHERE author_id = ?
+	`
+
+	row := r.db.QueryRowContext(ctx, query, userID)
+
+	var count int
+	err = row.Scan(&count)
+	if err == sql.ErrNoRows {
+		return 0, errors.WrapError(op, errors.ErrUserNotFound)
+	}
+	if err != nil {
+		return 0, errors.WrapError(op, err)
+	}
+
+	return count, nil
 }
 
 func (r *userRepository) UserExists(ctx context.Context, userID string) (bool, error) {

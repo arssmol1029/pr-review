@@ -31,3 +31,20 @@ type PullRequest struct {
 	CreatedAt         time.Time
 	MergedAt          *time.Time
 }
+
+type UserStats struct {
+	UserID        string
+	Username      string
+	TeamName      string
+	OpenReviews   int
+	MergedReviews int
+	CreatedPRs    int
+}
+
+type TeamStats struct {
+	TeamName          string
+	MemberCount       int
+	ActiveMembers     int
+	CreatedPRs        int
+	AvgReviewersPerPR float64
+}

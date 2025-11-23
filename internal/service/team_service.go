@@ -12,6 +12,8 @@ type TeamRepository interface {
 	CreateTeam(ctx context.Context, team *models.Team) error
 	GetTeamByName(ctx context.Context, name string) (*models.Team, error)
 	TeamExists(ctx context.Context, teamName string) (bool, error)
+	GetPRsCntByTeam(ctx context.Context, teamName string) (int, error)
+	GetAvgReviewersPerPR(ctx context.Context, teamName string) (float64, error)
 }
 
 type teamService struct {
@@ -57,4 +59,43 @@ func (s *teamService) GetTeam(ctx context.Context, teamName string) (*models.Tea
 	}
 
 	return team, nil
+}
+
+func (s *teamService) GetTeamStats(ctx context.Context, teamName string) (*models.TeamStats, error) {
+	const op = "userService.GetTeamStats"
+
+	team, err := s.repo.GetTeamByName(ctx, teamName)
+	if err != nil {
+		err = errors.WrapError(op, err)
+		s.logger.Error("Failed to get team", "error", err, "teamName", teamName)
+		return nil, err
+	}
+
+	stats := &models.TeamStats{}
+	stats.TeamName = team.Name
+
+	for _, user := range team.Members {
+		stats.MemberCount++
+		if user.IsActive {
+			stats.ActiveMembers++
+		}
+	}
+
+	prsCount, err := s.repo.GetPRsCntByTeam(ctx, teamName)
+	if err != nil {
+		err = errors.WrapError(op, err)
+		s.logger.Error("Failed to get team created PRs count", "error", err, "teamName", teamName)
+		return nil, err
+	}
+	stats.CreatedPRs = prsCount
+
+	avgReviewersCount, err := s.repo.GetAvgReviewersPerPR(ctx, teamName)
+	if err != nil {
+		err = errors.WrapError(op, err)
+		s.logger.Error("Failed to get team average reviewers count", "error", err, "teamName", teamName)
+		return nil, err
+	}
+	stats.AvgReviewersPerPR = avgReviewersCount
+
+	return stats, nil
 }
