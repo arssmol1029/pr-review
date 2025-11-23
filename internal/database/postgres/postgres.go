@@ -45,7 +45,7 @@ func New(ctx context.Context, cfg config.DatabaseConfig) (*PostgresRepository, e
 
 	r := &PostgresRepository{db: db}
 
-	if err := r.runMigrations(); err != nil {
+	if err := r.runMigrations(cfg.MigrationsPath); err != nil {
 		return nil, errors.WrapError(op, err)
 	}
 
@@ -53,7 +53,7 @@ func New(ctx context.Context, cfg config.DatabaseConfig) (*PostgresRepository, e
 	return r, nil
 }
 
-func (r *PostgresRepository) runMigrations() error {
+func (r *PostgresRepository) runMigrations(migrationsPath string) error {
 	const op = "PostgresRepository.runMigrations"
 
 	driver, err := postgres.WithInstance(r.db, &postgres.Config{})
@@ -61,8 +61,10 @@ func (r *PostgresRepository) runMigrations() error {
 		return errors.WrapError(op, err)
 	}
 
+	sourceURL := fmt.Sprintf("file://%s", migrationsPath)
+
 	m, err := migrate.NewWithDatabaseInstance(
-		"file://migrations",
+		sourceURL,
 		"postgres",
 		driver,
 	)

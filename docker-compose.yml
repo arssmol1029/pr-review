@@ -1,23 +1,6 @@
 version: '3.8'
 
 services:
-  app:
-    build: .
-    ports:
-      - "8080:8080"
-    depends_on:
-      - postgres
-    environment:
-      - ENV=production
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_USER=pr_review_user
-      - DB_PASSWORD=pr_review_password
-      - DB_NAME=pr_review_db
-      - DB_SSL_MODE=disable
-      - HTTP_ADDRESS=:8080
-    restart: unless-stopped
-
   postgres:
     image: postgres:15
     environment:
@@ -28,7 +11,34 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U pr_review_user -d pr_review_db" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - ENV=local
+      - LOG_LEVEL=debug
+      - HTTP_ADDRESS=:8080
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=pr_review_user
+      - DB_PASSWORD=pr_review_password
+      - DB_NAME=pr_review_db
+      - DB_SSL_MODE=disable
+      - DB_MIGRATIONS_PATH=/app/migrations
+    volumes:
+      - ./migrations:/app/migrations:ro
     restart: unless-stopped
 
 volumes:

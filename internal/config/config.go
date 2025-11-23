@@ -30,12 +30,13 @@ type HTTPServerConfig struct {
 }
 
 type DatabaseConfig struct {
-	Host     string `env:"DB_HOST" env-default:"localhost"`
-	Port     string `env:"DB_PORT" env-default:"5432"`
-	User     string `env:"DB_USER" env-default:"pr_review_user"`
-	Password string `env:"DB_PASSWORD" env-default:"pr_review_password"`
-	Database string `env:"DB_NAME" env-default:"pr_review_db"`
-	SSLMode  string `env:"DB_SSL_MODE" env-default:"disable"`
+	Host           string `env:"DB_HOST" env-default:"localhost"`
+	Port           string `env:"DB_PORT" env-default:"5432"`
+	User           string `env:"DB_USER" env-default:"pr_review_user"`
+	Password       string `env:"DB_PASSWORD" env-default:"pr_review_password"`
+	Database       string `env:"DB_NAME" env-default:"pr_review_db"`
+	SSLMode        string `env:"DB_SSL_MODE" env-default:"disable"`
+	MigrationsPath string `env:"DB_MIGRATIONS_PATH" env-default:"./migrations"`
 
 	MaxOpenConns    int           `env:"DB_MAX_OPEN_CONNS" env-default:"25"`
 	MaxIdleConns    int           `env:"DB_MAX_IDLE_CONNS" env-default:"5"`
