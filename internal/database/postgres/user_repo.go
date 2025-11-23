@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"database/sql"
+
 	"pr-review/internal/errors"
 	"pr-review/internal/models"
 )
@@ -102,7 +103,11 @@ func (r *PostgresRepository) GetPRsByReviewer(ctx context.Context, userID string
 	if err != nil {
 		return nil, errors.WrapError(op, err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			return
+		}
+	}()
 
 	var prs []*models.PullRequestShort
 	for rows.Next() {

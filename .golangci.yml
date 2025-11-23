@@ -1,0 +1,23 @@
+version: "2"
+
+linters:
+  enable:
+    - govet
+    - gocyclo
+    - gosec
+    - prealloc
+  settings:
+    govet:
+      enable-all: true
+      disable:
+        - shadow
+    gocyclo:
+      min-complexity: 20
+    gosec:
+      excludes:
+        - G404 # Вроде рандом здесь не критичен
+
+formatters:
+  enable:
+    - gofmt
+    - goimports

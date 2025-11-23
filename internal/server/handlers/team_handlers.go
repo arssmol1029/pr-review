@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+
 	serviceErrors "pr-review/internal/errors"
 	"pr-review/internal/models"
 	"pr-review/internal/server/response"
@@ -66,7 +67,7 @@ func (h *TeamHandler) Add(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var members []models.TeamMember
+	members := make([]models.TeamMember, 0)
 	for _, m := range req.Members {
 		member := models.TeamMember{
 			UserID:   m.UserID,
@@ -121,13 +122,6 @@ func (h *TeamHandler) Add(w http.ResponseWriter, r *http.Request) {
 		}
 		res.Team.Members = append(res.Team.Members, member)
 	}
-
-	// if err := validate.Struct(res); err != nil {
-	// 	log.Error("Response validation failed", "error", err)
-	// 	render.Status(r, http.StatusInternalServerError)
-	// 	render.JSON(w, r, response.ERROR("VALIDATION_ERROR", "wrong response format"))
-	// 	return
-	// }
 
 	render.Status(r, http.StatusCreated)
 	render.JSON(w, r, res)
@@ -185,14 +179,6 @@ func (h *TeamHandler) Get(w http.ResponseWriter, r *http.Request) {
 		}
 		res.Members = append(res.Members, member)
 	}
-
-	// validate := validator.New()
-	// if err := validate.Struct(res); err != nil {
-	// 	log.Error("Response validation failed", "error", err)
-	// 	render.Status(r, http.StatusInternalServerError)
-	// 	render.JSON(w, r, response.ERROR("VALIDATION_ERROR", "wrong response format"))
-	// 	return
-	// }
 
 	render.Status(r, http.StatusOK)
 	render.JSON(w, r, res)

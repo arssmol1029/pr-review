@@ -5,9 +5,10 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"time"
+
 	"pr-review/internal/config"
 	"pr-review/internal/errors"
-	"time"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
@@ -19,7 +20,7 @@ type PostgresRepository struct {
 	db *sql.DB
 }
 
-func New(ctx context.Context, cfg config.DatabaseConfig) (*PostgresRepository, error) {
+func New(ctx context.Context, cfg *config.DatabaseConfig) (*PostgresRepository, error) {
 	const op = "PostgresRepository.New"
 
 	connStr := fmt.Sprintf(

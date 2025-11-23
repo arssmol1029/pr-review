@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+
 	serviceErrors "pr-review/internal/errors"
 	"pr-review/internal/models"
 	"pr-review/internal/server/response"
@@ -84,14 +85,6 @@ func (h *StatsHandler) User(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	// validate := validator.New()
-	// if err := validate.Struct(res); err != nil {
-	// 	log.Error("Response validation failed", "error", err)
-	// 	render.Status(r, http.StatusInternalServerError)
-	// 	render.JSON(w, r, response.ERROR("VALIDATION_ERROR", "wrong response format"))
-	// 	return
-	// }
-
 	render.Status(r, http.StatusOK)
 	render.JSON(w, r, res)
 }
@@ -147,14 +140,6 @@ func (h *StatsHandler) Team(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	// validate := validator.New()
-	// if err := validate.Struct(res); err != nil {
-	// 	log.Error("Response validation failed", "error", err)
-	// 	render.Status(r, http.StatusInternalServerError)
-	// 	render.JSON(w, r, response.ERROR("VALIDATION_ERROR", "wrong response format"))
-	// 	return
-	// }
-
 	render.Status(r, http.StatusOK)
 	render.JSON(w, r, res)
 }
@@ -199,14 +184,6 @@ func (h *StatsHandler) Total(w http.ResponseWriter, r *http.Request) {
 			AvgReviewersPerPR: stats.AvgReviewersPerPR,
 		},
 	}
-
-	// validate := validator.New()
-	// if err := validate.Struct(res); err != nil {
-	// 	log.Error("Response validation failed", "error", err)
-	// 	render.Status(r, http.StatusInternalServerError)
-	// 	render.JSON(w, r, response.ERROR("VALIDATION_ERROR", "wrong response format"))
-	// 	return
-	// }
 
 	render.Status(r, http.StatusOK)
 	render.JSON(w, r, res)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+
 	"pr-review/internal/config"
 	"pr-review/internal/errors"
 
@@ -18,7 +19,7 @@ type Config struct {
 	StoragePath string
 }
 
-func New(ctx context.Context, cfg config.DatabaseConfig) (*SQLiteRepository, error) {
+func New(ctx context.Context, cfg *config.DatabaseConfig) (*SQLiteRepository, error) {
 	const op = "SQLiteRepository.Init"
 
 	db, err := sql.Open("sqlite", cfg.Path)

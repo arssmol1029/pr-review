@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+
 	serviceErrors "pr-review/internal/errors"
 	"pr-review/internal/models"
 	"pr-review/internal/server/response"
@@ -92,13 +93,6 @@ func (h *UserHandler) SetIsActive(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	// if err := validate.Struct(res); err != nil {
-	// 	log.Error("Response validation failed", "error", err)
-	// 	render.Status(r, http.StatusInternalServerError)
-	// 	render.JSON(w, r, response.ERROR("VALIDATION_ERROR", "wrong response format"))
-	// 	return
-	// }
-
 	render.Status(r, http.StatusOK)
 	render.JSON(w, r, res)
 }
@@ -156,14 +150,6 @@ func (h *UserHandler) GetReview(w http.ResponseWriter, r *http.Request) {
 		}
 		res.PullRequests = append(res.PullRequests, prRes)
 	}
-
-	// validate := validator.New()
-	// if err := validate.Struct(res); err != nil {
-	// 	log.Error("Response validation failed", "error", err)
-	// 	render.Status(r, http.StatusInternalServerError)
-	// 	render.JSON(w, r, response.ERROR("VALIDATION_ERROR", "wrong response format"))
-	// 	return
-	// }
 
 	render.Status(r, http.StatusOK)
 	render.JSON(w, r, res)

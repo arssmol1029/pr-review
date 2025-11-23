@@ -3,10 +3,11 @@ package service
 import (
 	"context"
 	"log/slog"
+	"time"
+
 	"pr-review/internal/errors"
 	"pr-review/internal/models"
 	"pr-review/internal/server/handlers"
-	"time"
 )
 
 type PRRepository interface {

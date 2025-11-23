@@ -17,6 +17,9 @@ logs:
 clean:
 	docker-compose down -v
 
+lint:
+	golangci-lint run
+
 run: build up
 	@echo "Service is starting..."
 

@@ -5,10 +5,11 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"time"
+
 	serviceErrors "pr-review/internal/errors"
 	"pr-review/internal/models"
 	"pr-review/internal/server/response"
-	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
@@ -109,13 +110,6 @@ func (h *PRHandler) Create(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	// if err := validate.Struct(res); err != nil {
-	// 	log.Error("Response validation failed", "error", err)
-	// 	render.Status(r, http.StatusInternalServerError)
-	// 	render.JSON(w, r, response.ERROR("VALIDATION_ERROR", "wrong request format"))
-	// 	return
-	// }
-
 	render.Status(r, http.StatusCreated)
 	render.JSON(w, r, res)
 }
@@ -163,12 +157,12 @@ func (h *PRHandler) Merge(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type PRItem struct {
+		MetgedAt          *time.Time `json:"merged_at" validate:"required"`
 		ID                string     `json:"pull_request_id" validate:"required"`
 		Name              string     `json:"pull_request_name" validate:"required"`
 		AuthorID          string     `json:"author_id" validate:"required"`
 		Status            string     `json:"status" validate:"required"`
 		AssignedReviewers []string   `json:"assigned_reviewers" validate:"required"`
-		MetgedAt          *time.Time `json:"merged_at" validate:"required"`
 	}
 
 	res := struct {
@@ -183,13 +177,6 @@ func (h *PRHandler) Merge(w http.ResponseWriter, r *http.Request) {
 			MetgedAt:          pr.MergedAt,
 		},
 	}
-
-	// if err := validate.Struct(res); err != nil {
-	// 	log.Error("Response validation failed", "error", err)
-	// 	render.Status(r, http.StatusInternalServerError)
-	// 	render.JSON(w, r, response.ERROR("VALIDATION_ERROR", "wrong response format"))
-	// 	return
-	// }
 
 	render.Status(r, http.StatusOK)
 	render.JSON(w, r, res)
@@ -271,8 +258,8 @@ func (h *PRHandler) Reassign(w http.ResponseWriter, r *http.Request) {
 	}
 
 	res := struct {
-		PullRequest PRItem `json:"pr" validate:"required"`
 		NewUserID   string `json:"replaced_by" validate:"required"`
+		PullRequest PRItem `json:"pr" validate:"required"`
 	}{
 		PullRequest: PRItem{
 			ID:                pr.ID,
@@ -283,13 +270,6 @@ func (h *PRHandler) Reassign(w http.ResponseWriter, r *http.Request) {
 		},
 		NewUserID: *newUserID,
 	}
-
-	// if err := validate.Struct(res); err != nil {
-	// 	log.Error("Response validation failed", "error", err)
-	// 	render.Status(r, http.StatusInternalServerError)
-	// 	render.JSON(w, r, response.ERROR("VALIDATION_ERROR", "wrong response format"))
-	// 	return
-	// }
 
 	render.Status(r, http.StatusOK)
 	render.JSON(w, r, res)

@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"database/sql"
+
 	"pr-review/internal/errors"
 	"pr-review/internal/models"
 )
@@ -32,7 +33,11 @@ func (r *PostgresRepository) CreateTeam(ctx context.Context, team *models.Team) 
 	if err != nil {
 		return errors.WrapError(op, err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil && err != sql.ErrTxDone {
+			return
+		}
+	}()
 
 	query := `INSERT INTO teams (name) VALUES ($1)`
 	_, err = tx.ExecContext(ctx, query, team.Name)
@@ -76,7 +81,11 @@ func (r *PostgresRepository) GetTeamByName(ctx context.Context, name string) (*m
 	if err != nil {
 		return nil, errors.WrapError(op, err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			return
+		}
+	}()
 
 	var members []models.TeamMember
 	for rows.Next() {

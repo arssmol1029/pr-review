@@ -4,9 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"math/rand"
+	"time"
+
 	"pr-review/internal/errors"
 	"pr-review/internal/models"
-	"time"
 )
 
 func (r *PostgresRepository) CreatePR(ctx context.Context, pr *models.PullRequestShort) error {
@@ -44,7 +45,11 @@ func (r *PostgresRepository) CreatePR(ctx context.Context, pr *models.PullReques
 	if err != nil {
 		return errors.WrapError(op, err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil && err != sql.ErrTxDone {
+			return
+		}
+	}()
 
 	query := `INSERT INTO pull_requests (id, name, author_id, status, created_at) VALUES ($1, $2, $3, 'OPEN', $4)`
 	_, err = tx.ExecContext(ctx, query, pr.ID, pr.Name, pr.AuthorID, time.Now())
@@ -189,7 +194,11 @@ func (r *PostgresRepository) ReassignReviewer(ctx context.Context, prID, oldUser
 	if err != nil {
 		return nil, errors.WrapError(op, err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil && err != sql.ErrTxDone {
+			return
+		}
+	}()
 
 	deleteQuery := `DELETE FROM pr_reviewers WHERE pr_id = $1 AND user_id = $2`
 	_, err = tx.ExecContext(ctx, deleteQuery, prID, oldUserID)
@@ -297,7 +306,11 @@ func (r *PostgresRepository) getPRReviewers(ctx context.Context, prID string) ([
 	if err != nil {
 		return nil, errors.WrapError(op, err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			return
+		}
+	}()
 
 	var reviewers []string
 	for rows.Next() {
@@ -334,7 +347,7 @@ func (r *PostgresRepository) getUserTeam(ctx context.Context, userID string) (st
 	return teamName, nil
 }
 
-func (r *PostgresRepository) getActiveTeamMembers(ctx context.Context, teamName string, excludeUserID string, excludeReviewers []string) ([]string, error) {
+func (r *PostgresRepository) getActiveTeamMembers(ctx context.Context, teamName, excludeUserID string, excludeReviewers []string) ([]string, error) {
 	const op = "Postgres.getActiveTeamMembers"
 
 	excludeMap := make(map[string]bool)
@@ -352,7 +365,11 @@ func (r *PostgresRepository) getActiveTeamMembers(ctx context.Context, teamName 
 	if err != nil {
 		return nil, errors.WrapError(op, err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			return
+		}
+	}()
 
 	var members []string
 	for rows.Next() {

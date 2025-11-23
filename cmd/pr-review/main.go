@@ -6,13 +6,13 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"syscall"
+	"time"
+
 	"pr-review/internal/config"
 	"pr-review/internal/database/postgres"
 	"pr-review/internal/server/handlers"
 	"pr-review/internal/service"
-	"syscall"
-
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -30,7 +30,7 @@ func main() {
 
 	ctx := context.Background()
 
-	repository, err := setupDatabase(ctx, log, cfg.Database)
+	repository, err := setupDatabase(ctx, log, &cfg.Database)
 	if err != nil {
 		log.Error("Failed to setup database", "error", err)
 		os.Exit(1)
@@ -52,11 +52,15 @@ func main() {
 	router.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		if err := repository.Ping(r.Context()); err != nil {
 			w.WriteHeader(http.StatusServiceUnavailable)
-			w.Write([]byte("Database unavailable"))
+			if _, err := w.Write([]byte("Database unavailable")); err != nil {
+				log.Error("Failed to write response", "error", err)
+			}
 			return
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		if _, err := w.Write([]byte("OK")); err != nil {
+			log.Error("Failed to write response", "error", err)
+		}
 	})
 
 	log.Info("Starting server...")
@@ -149,7 +153,7 @@ func SetupRouter(
 	return router
 }
 
-func setupDatabase(ctx context.Context, log *slog.Logger, dbCfg config.DatabaseConfig) (*postgres.PostgresRepository, error) {
+func setupDatabase(ctx context.Context, log *slog.Logger, dbCfg *config.DatabaseConfig) (*postgres.PostgresRepository, error) {
 	log.Info("Initializing database",
 		"path", dbCfg.Path,
 		"init_timeout", dbCfg.InitTimeout,
@@ -158,11 +162,6 @@ func setupDatabase(ctx context.Context, log *slog.Logger, dbCfg config.DatabaseC
 
 	initCtx, cancel := context.WithTimeout(ctx, dbCfg.InitTimeout)
 	defer cancel()
-
-	// repo, err := sqlite.New(initCtx, dbCfg)
-	// if err != nil {
-	// 	return nil, err
-	// }
 
 	repo, err := postgres.New(initCtx, dbCfg)
 	if err != nil {

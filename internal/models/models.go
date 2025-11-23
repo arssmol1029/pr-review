@@ -9,8 +9,8 @@ type TeamMember struct {
 }
 
 type User struct {
-	TeamMember
 	TeamName string
+	TeamMember
 }
 
 type Team struct {
@@ -26,10 +26,10 @@ type PullRequestShort struct {
 }
 
 type PullRequest struct {
+	CreatedAt time.Time
+	MergedAt  *time.Time
 	PullRequestShort
 	AssignedReviewers []string
-	CreatedAt         time.Time
-	MergedAt          *time.Time
 }
 
 type UserStats struct {

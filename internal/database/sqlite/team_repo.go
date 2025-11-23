@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+
 	"pr-review/internal/errors"
 	"pr-review/internal/models"
 )
@@ -32,7 +33,11 @@ func (r *SQLiteRepository) CreateTeam(ctx context.Context, team *models.Team) er
 	if err != nil {
 		return errors.WrapError(op, err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil && err != sql.ErrTxDone {
+			return
+		}
+	}()
 
 	query := `INSERT INTO teams (name) VALUES (?)`
 	_, err = tx.ExecContext(ctx, query, team.Name)
@@ -76,7 +81,11 @@ func (r *SQLiteRepository) GetTeamByName(ctx context.Context, name string) (*mod
 	if err != nil {
 		return nil, errors.WrapError(op, err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			return
+		}
+	}()
 
 	var members []models.TeamMember
 	for rows.Next() {

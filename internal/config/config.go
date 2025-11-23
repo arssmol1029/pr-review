@@ -30,22 +30,19 @@ type HTTPServerConfig struct {
 }
 
 type DatabaseConfig struct {
-	Host           string `env:"DB_HOST" env-default:"localhost"`
-	Port           string `env:"DB_PORT" env-default:"5432"`
-	User           string `env:"DB_USER" env-default:"pr_review_user"`
-	Password       string `env:"DB_PASSWORD" env-default:"pr_review_password"`
-	Database       string `env:"DB_NAME" env-default:"pr_review_db"`
-	SSLMode        string `env:"DB_SSL_MODE" env-default:"disable"`
-	MigrationsPath string `env:"DB_MIGRATIONS_PATH" env-default:"./migrations"`
-
+	MigrationsPath  string        `env:"DB_MIGRATIONS_PATH" env-default:"./migrations"`
+	Port            string        `env:"DB_PORT" env-default:"5432"`
+	User            string        `env:"DB_USER" env-default:"pr_review_user"`
+	Password        string        `env:"DB_PASSWORD" env-default:"pr_review_password"`
+	Database        string        `env:"DB_NAME" env-default:"pr_review_db"`
+	SSLMode         string        `env:"DB_SSL_MODE" env-default:"disable"`
+	Host            string        `env:"DB_HOST" env-default:"localhost"`
+	Path            string        `env:"DB_PATH" env-default:""`
 	MaxOpenConns    int           `env:"DB_MAX_OPEN_CONNS" env-default:"25"`
 	MaxIdleConns    int           `env:"DB_MAX_IDLE_CONNS" env-default:"5"`
 	ConnMaxLifetime time.Duration `env:"DB_CONN_MAX_LIFETIME" env-default:"1h"`
-
-	InitTimeout time.Duration `env:"DB_INIT_TIMEOUT" env-default:"10s"`
-	PingTimeout time.Duration `env:"DB_PING_TIMEOUT" env-default:"5s"`
-
-	Path string `env:"DB_PATH" env-default:""`
+	InitTimeout     time.Duration `env:"DB_INIT_TIMEOUT" env-default:"10s"`
+	PingTimeout     time.Duration `env:"DB_PING_TIMEOUT" env-default:"5s"`
 }
 
 func MustLoad() *Config {
