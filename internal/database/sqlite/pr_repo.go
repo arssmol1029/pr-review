@@ -246,6 +246,53 @@ func (r *SQLiteRepository) IsReviewerAssigned(ctx context.Context, prID, userID 
 	return true, nil
 }
 
+func (r *SQLiteRepository) GetTotalStats(ctx context.Context) (*models.TotalStats, error) {
+	const op = "SQLite.GetTotalStats"
+
+	// Не придумал, как такое красиво сделть, поэтому спросил иишку :3
+	query := `
+		SELECT 
+			-- Команды
+			(SELECT COUNT(*) FROM teams) as total_teams,
+			-- Пользователи
+			(SELECT COUNT(*) FROM users) as total_users,
+			(SELECT COUNT(*) FROM users WHERE is_active = 1) as active_users,
+			-- PR
+			(SELECT COUNT(*) FROM pull_requests) as total_prs,
+			(SELECT COUNT(*) FROM pull_requests WHERE status = 'OPEN') as open_prs,
+			(SELECT COUNT(*) FROM pull_requests WHERE status = 'MERGED') as merged_prs,
+			-- Среднее количество ревьюверов
+			COALESCE(
+				ROUND(
+					CAST((SELECT COUNT(*) FROM pr_reviewers) AS FLOAT) / 
+					NULLIF((SELECT COUNT(*) FROM pull_requests), 0), 
+					2
+				), 
+				0
+			) as avg_reviewers_per_pr;
+	`
+	row := r.db.QueryRowContext(ctx, query)
+
+	stats := &models.TotalStats{}
+	err := row.Scan(
+		&stats.TotalTeams,
+		&stats.TotalUsers,
+		&stats.ActiveUsers,
+		&stats.TotalPRs,
+		&stats.OpenPRs,
+		&stats.MergedPRs,
+		&stats.AvgReviewersPerPR,
+	)
+	if err == sql.ErrNoRows {
+		return &models.TotalStats{}, nil
+	}
+	if err != nil {
+		return nil, errors.WrapError(op, err)
+	}
+
+	return stats, nil
+}
+
 // private methods
 
 func (r *SQLiteRepository) getPRReviewers(ctx context.Context, prID string) ([]string, error) {

@@ -17,7 +17,6 @@ import (
 type TeamService interface {
 	CreateTeam(ctx context.Context, team *models.Team) (*models.Team, error)
 	GetTeam(ctx context.Context, teamName string) (*models.Team, error)
-	GetTeamStats(ctx context.Context, userID string) (*models.TeamStats, error)
 }
 
 type TeamHandler struct {
@@ -185,69 +184,6 @@ func (h *TeamHandler) Get(w http.ResponseWriter, r *http.Request) {
 			IsActive: m.IsActive,
 		}
 		res.Members = append(res.Members, member)
-	}
-
-	// validate := validator.New()
-	// if err := validate.Struct(res); err != nil {
-	// 	log.Error("Response validation failed", "error", err)
-	// 	render.Status(r, http.StatusInternalServerError)
-	// 	render.JSON(w, r, response.ERROR("VALIDATION_ERROR", "wrong response format"))
-	// 	return
-	// }
-
-	render.Status(r, http.StatusOK)
-	render.JSON(w, r, res)
-}
-
-// GET team/stats
-func (h *TeamHandler) Stats(w http.ResponseWriter, r *http.Request) {
-	const op = "TeamHandlers.Stats"
-
-	log := h.logger.With(
-		slog.String("op", op),
-		slog.String("request_id", middleware.GetReqID(r.Context())),
-	)
-
-	teamName := r.URL.Query().Get("team_name")
-	if teamName == "" {
-		log.Error("team_name query parameter is required")
-		render.Status(r, http.StatusBadRequest)
-		render.JSON(w, r, response.ERROR("INVALID_REQUEST", "team_name query parameter is required"))
-		return
-	}
-
-	stats, err := h.service.GetTeamStats(r.Context(), teamName)
-	if errors.Is(err, serviceErrors.ErrTeamNotFound) {
-		log.Error("Team not found", "error", err, "team_name", teamName)
-		render.Status(r, http.StatusNotFound)
-		render.JSON(w, r, response.NOT_FOUND("team not found"))
-		return
-	}
-	if err != nil {
-		log.Error("Failed to get team stats", "error", err, "team_name", teamName)
-		render.Status(r, http.StatusInternalServerError)
-		render.JSON(w, r, response.ERROR("INTERNAL_ERROR", "failed to get team"))
-		return
-	}
-
-	type StatsItem struct {
-		TeamName          string  `json:"team_name" validate:"required"`
-		MemberCount       int     `json:"member_count" validate:"required"`
-		ActiveMembers     int     `json:"active_members" validate:"required"`
-		CreatedPRs        int     `json:"created_prs" validate:"required"`
-		AvgReviewersPerPR float64 `json:"avg_reviewers_per_pr" validate:"required"`
-	}
-
-	res := struct {
-		Stats StatsItem `json:"team_stats" validate:"required"`
-	}{
-		Stats: StatsItem{
-			TeamName:          stats.TeamName,
-			MemberCount:       stats.MemberCount,
-			ActiveMembers:     stats.ActiveMembers,
-			CreatedPRs:        stats.CreatedPRs,
-			AvgReviewersPerPR: stats.AvgReviewersPerPR,
-		},
 	}
 
 	// validate := validator.New()

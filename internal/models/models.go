@@ -48,3 +48,13 @@ type TeamStats struct {
 	CreatedPRs        int
 	AvgReviewersPerPR float64
 }
+
+type TotalStats struct {
+	TotalTeams        int     `json:"total_teams"`
+	TotalUsers        int     `json:"total_users"`
+	ActiveUsers       int     `json:"active_users"`
+	TotalPRs          int     `json:"total_prs"`
+	OpenPRs           int     `json:"open_prs"`
+	MergedPRs         int     `json:"merged_prs"`
+	AvgReviewersPerPR float64 `json:"avg_reviewers_per_pr"`
+}
