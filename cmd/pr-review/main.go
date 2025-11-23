@@ -7,7 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"pr-review/internal/config"
-	"pr-review/internal/database/sqlite"
+	"pr-review/internal/database/postgres"
 	"pr-review/internal/server/handlers"
 	"pr-review/internal/service"
 	"syscall"
@@ -149,7 +149,7 @@ func SetupRouter(
 	return router
 }
 
-func setupDatabase(ctx context.Context, log *slog.Logger, dbCfg config.DatabaseConfig) (*sqlite.SQLiteRepository, error) {
+func setupDatabase(ctx context.Context, log *slog.Logger, dbCfg config.DatabaseConfig) (*postgres.PostgresRepository, error) {
 	log.Info("Initializing database",
 		"path", dbCfg.Path,
 		"init_timeout", dbCfg.InitTimeout,
@@ -159,7 +159,12 @@ func setupDatabase(ctx context.Context, log *slog.Logger, dbCfg config.DatabaseC
 	initCtx, cancel := context.WithTimeout(ctx, dbCfg.InitTimeout)
 	defer cancel()
 
-	repo, err := sqlite.New(initCtx, dbCfg.Path)
+	// repo, err := sqlite.New(initCtx, dbCfg)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	repo, err := postgres.New(initCtx, dbCfg)
 	if err != nil {
 		return nil, err
 	}

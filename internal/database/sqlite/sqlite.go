@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"pr-review/internal/config"
+	"pr-review/internal/errors"
 
 	_ "modernc.org/sqlite"
 )
@@ -12,12 +14,16 @@ type SQLiteRepository struct {
 	db *sql.DB
 }
 
-func New(ctx context.Context, storagePath string) (*SQLiteRepository, error) {
-	const op = "SQLiteDatabase.Init"
+type Config struct {
+	StoragePath string
+}
 
-	db, err := sql.Open("sqlite", storagePath)
+func New(ctx context.Context, cfg config.DatabaseConfig) (*SQLiteRepository, error) {
+	const op = "SQLiteRepository.Init"
+
+	db, err := sql.Open("sqlite", cfg.Path)
 	if err != nil {
-		return nil, fmt.Errorf("%s: failed to open database: %w", op, err)
+		return nil, errors.WrapError(op, err)
 	}
 
 	r := &SQLiteRepository{db: db}
@@ -61,7 +67,7 @@ func New(ctx context.Context, storagePath string) (*SQLiteRepository, error) {
 
 	for _, query := range queries {
 		if _, err := r.db.ExecContext(ctx, query); err != nil {
-			return nil, fmt.Errorf("%s: failed to execute query %s: %w", op, query, err)
+			return nil, errors.WrapError(op, err)
 		}
 	}
 
@@ -69,19 +75,19 @@ func New(ctx context.Context, storagePath string) (*SQLiteRepository, error) {
 }
 
 func (r *SQLiteRepository) Close() error {
-	const op = "SQLiteDatabase.Close"
+	const op = "SQLiteRepository.Close"
 
 	if r.db != nil {
 		err := r.db.Close()
 		if err != nil {
-			return fmt.Errorf("%s: failed to close database: %w", op, err)
+			return errors.WrapError(op, err)
 		}
 	}
 	return nil
 }
 
 func (r *SQLiteRepository) Ping(ctx context.Context) error {
-	const op = "SQLiteDatabase.Ping"
+	const op = "SQLiteRepository.Ping"
 
 	if r.db == nil {
 		return fmt.Errorf("%s: database not initialized", op)
@@ -89,7 +95,7 @@ func (r *SQLiteRepository) Ping(ctx context.Context) error {
 
 	err := r.db.PingContext(ctx)
 	if err != nil {
-		return fmt.Errorf("%s: failed to ping database: %w", op, err)
+		return errors.WrapError(op, err)
 	}
 	return nil
 }

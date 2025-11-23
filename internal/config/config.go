@@ -30,9 +30,21 @@ type HTTPServerConfig struct {
 }
 
 type DatabaseConfig struct {
-	Path        string        `env:"DB_PATH" env-default:"storage.db"`
+	Host     string `env:"DB_HOST" env-default:"localhost"`
+	Port     string `env:"DB_PORT" env-default:"5432"`
+	User     string `env:"DB_USER" env-default:"pr_review_user"`
+	Password string `env:"DB_PASSWORD" env-default:"pr_review_password"`
+	Database string `env:"DB_NAME" env-default:"pr_review_db"`
+	SSLMode  string `env:"DB_SSL_MODE" env-default:"disable"`
+
+	MaxOpenConns    int           `env:"DB_MAX_OPEN_CONNS" env-default:"25"`
+	MaxIdleConns    int           `env:"DB_MAX_IDLE_CONNS" env-default:"5"`
+	ConnMaxLifetime time.Duration `env:"DB_CONN_MAX_LIFETIME" env-default:"1h"`
+
 	InitTimeout time.Duration `env:"DB_INIT_TIMEOUT" env-default:"10s"`
 	PingTimeout time.Duration `env:"DB_PING_TIMEOUT" env-default:"5s"`
+
+	Path string `env:"DB_PATH" env-default:""`
 }
 
 func MustLoad() *Config {

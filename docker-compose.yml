@@ -1,15 +1,35 @@
-version: "3.8"
+version: '3.8'
 
 services:
   app:
     build: .
     ports:
       - "8080:8080"
-    volumes:
-      - ./data:/app/data
-    env_file:
-      - .env-default
-      # - .env
+    depends_on:
+      - postgres
     environment:
-      - DB_PATH=/app/data/storage.db
+      - ENV=production
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=pr_review_user
+      - DB_PASSWORD=pr_review_password
+      - DB_NAME=pr_review_db
+      - DB_SSL_MODE=disable
+      - HTTP_ADDRESS=:8080
     restart: unless-stopped
+
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=pr_review_db
+      - POSTGRES_USER=pr_review_user
+      - POSTGRES_PASSWORD=pr_review_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
