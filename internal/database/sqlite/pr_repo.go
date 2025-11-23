@@ -6,19 +6,10 @@ import (
 	"math/rand"
 	"pr-review/internal/errors"
 	"pr-review/internal/models"
-	"pr-review/internal/service"
 	"time"
 )
 
-type prRepository struct {
-	db *sql.DB
-}
-
-func NewPRRepository(s *SQLiteDatabase) service.PRRepository {
-	return &prRepository{db: s.db}
-}
-
-func (r *prRepository) CreatePR(ctx context.Context, pr *models.PullRequestShort) error {
+func (r *SQLiteRepository) CreatePR(ctx context.Context, pr *models.PullRequestShort) error {
 	const op = "SQLite.CreatePR"
 
 	exists, err := r.PRExists(ctx, pr.ID)
@@ -29,7 +20,7 @@ func (r *prRepository) CreatePR(ctx context.Context, pr *models.PullRequestShort
 		return errors.WrapError(op, errors.ErrPRExists)
 	}
 
-	exists, err = r.userExists(ctx, pr.AuthorID)
+	exists, err = r.UserExists(ctx, pr.AuthorID)
 	if err != nil {
 		return errors.WrapError(op, err)
 	}
@@ -47,7 +38,7 @@ func (r *prRepository) CreatePR(ctx context.Context, pr *models.PullRequestShort
 		return errors.WrapError(op, err)
 	}
 
-	selectedReviewers := r.selectRandomReviewers(availableReviewers, 2)
+	selectedReviewers := selectRandomReviewers(availableReviewers, 2)
 
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -79,7 +70,7 @@ func (r *prRepository) CreatePR(ctx context.Context, pr *models.PullRequestShort
 	return nil
 }
 
-func (r *prRepository) GetPRByID(ctx context.Context, id string) (*models.PullRequest, error) {
+func (r *SQLiteRepository) GetPRByID(ctx context.Context, id string) (*models.PullRequest, error) {
 	const op = "SQLite.GetPRByID"
 
 	exists, err := r.PRExists(ctx, id)
@@ -117,7 +108,7 @@ func (r *prRepository) GetPRByID(ctx context.Context, id string) (*models.PullRe
 	return &pr, nil
 }
 
-func (r *prRepository) MergePR(ctx context.Context, prID string, mergedAt time.Time) error {
+func (r *SQLiteRepository) MergePR(ctx context.Context, prID string, mergedAt time.Time) error {
 	const op = "SQLite.MergePR"
 
 	exists, err := r.PRExists(ctx, prID)
@@ -145,7 +136,7 @@ func (r *prRepository) MergePR(ctx context.Context, prID string, mergedAt time.T
 	return nil
 }
 
-func (r *prRepository) ReassignReviewer(ctx context.Context, prID, oldUserID string) (*string, error) {
+func (r *SQLiteRepository) ReassignReviewer(ctx context.Context, prID, oldUserID string) (*string, error) {
 	const op = "SQLite.ReassignReviewer"
 
 	pr, err := r.GetPRByID(ctx, prID)
@@ -156,7 +147,7 @@ func (r *prRepository) ReassignReviewer(ctx context.Context, prID, oldUserID str
 		return nil, errors.WrapError(op, errors.ErrPRMerged)
 	}
 
-	exists, err := r.userExists(ctx, oldUserID)
+	exists, err := r.UserExists(ctx, oldUserID)
 	if err != nil {
 		return nil, errors.WrapError(op, err)
 	}
@@ -188,7 +179,7 @@ func (r *prRepository) ReassignReviewer(ctx context.Context, prID, oldUserID str
 		return nil, errors.WrapError(op, errors.ErrNoCandidate)
 	}
 
-	selectedReviewers := r.selectRandomReviewers(availableReviewers, 1)
+	selectedReviewers := selectRandomReviewers(availableReviewers, 1)
 	if len(selectedReviewers) == 0 {
 		return nil, errors.WrapError(op, errors.ErrNoCandidate)
 	}
@@ -219,7 +210,7 @@ func (r *prRepository) ReassignReviewer(ctx context.Context, prID, oldUserID str
 	return &reviewerID, nil
 }
 
-func (r *prRepository) PRExists(ctx context.Context, prID string) (bool, error) {
+func (r *SQLiteRepository) PRExists(ctx context.Context, prID string) (bool, error) {
 	const op = "SQLite.PRExists"
 
 	query := `SELECT 1 FROM pull_requests WHERE id = ?`
@@ -237,7 +228,7 @@ func (r *prRepository) PRExists(ctx context.Context, prID string) (bool, error) 
 	return true, nil
 }
 
-func (r *prRepository) IsReviewerAssigned(ctx context.Context, prID, userID string) (bool, error) {
+func (r *SQLiteRepository) IsReviewerAssigned(ctx context.Context, prID, userID string) (bool, error) {
 	const op = "SQLite.IsReviewerAssigned"
 
 	query := `SELECT 1 FROM pr_reviewers WHERE pr_id = ? AND user_id = ?`
@@ -257,7 +248,7 @@ func (r *prRepository) IsReviewerAssigned(ctx context.Context, prID, userID stri
 
 // private methods
 
-func (r *prRepository) getPRReviewers(ctx context.Context, prID string) ([]string, error) {
+func (r *SQLiteRepository) getPRReviewers(ctx context.Context, prID string) ([]string, error) {
 	const op = "SQLite.getPRReviewers"
 
 	query := `SELECT user_id FROM pr_reviewers WHERE pr_id = ? ORDER BY user_id`
@@ -284,7 +275,7 @@ func (r *prRepository) getPRReviewers(ctx context.Context, prID string) ([]strin
 	return reviewers, nil
 }
 
-func (r *prRepository) getUserTeam(ctx context.Context, userID string) (string, error) {
+func (r *SQLiteRepository) getUserTeam(ctx context.Context, userID string) (string, error) {
 	const op = "SQLite.getUserTeam"
 
 	query := `SELECT team_name FROM users WHERE user_id = ?`
@@ -302,25 +293,7 @@ func (r *prRepository) getUserTeam(ctx context.Context, userID string) (string, 
 	return teamName, nil
 }
 
-func (r *prRepository) userExists(ctx context.Context, userID string) (bool, error) {
-	const op = "SQLite.UserExists"
-
-	query := `SELECT 1 FROM users WHERE user_id = ?`
-	row := r.db.QueryRowContext(ctx, query, userID)
-
-	var exists int
-	err := row.Scan(&exists)
-	if err == sql.ErrNoRows {
-		return false, nil
-	}
-	if err != nil {
-		return false, errors.WrapError(op, err)
-	}
-
-	return true, nil
-}
-
-func (r *prRepository) getActiveTeamMembers(ctx context.Context, teamName string, excludeUserID string, excludeReviewers []string) ([]string, error) {
+func (r *SQLiteRepository) getActiveTeamMembers(ctx context.Context, teamName string, excludeUserID string, excludeReviewers []string) ([]string, error) {
 	const op = "SQLite.getActiveTeamMembers"
 
 	excludeMap := make(map[string]bool)
@@ -359,7 +332,7 @@ func (r *prRepository) getActiveTeamMembers(ctx context.Context, teamName string
 	return members, nil
 }
 
-func (r *prRepository) selectRandomReviewers(reviewers []string, maxCount int) []string {
+func selectRandomReviewers(reviewers []string, maxCount int) []string {
 	if len(reviewers) == 0 {
 		return nil
 	}

@@ -5,18 +5,9 @@ import (
 	"database/sql"
 	"pr-review/internal/errors"
 	"pr-review/internal/models"
-	"pr-review/internal/service"
 )
 
-type userRepository struct {
-	db *sql.DB
-}
-
-func NewUserRepository(s *SQLiteDatabase) service.UserRepository {
-	return &userRepository{db: s.db}
-}
-
-func (r *userRepository) GetUserByID(ctx context.Context, id string) (*models.User, error) {
+func (r *SQLiteRepository) GetUserByID(ctx context.Context, id string) (*models.User, error) {
 	const op = "SQLite.GetUserByID"
 
 	exists, err := r.UserExists(ctx, id)
@@ -42,7 +33,7 @@ func (r *userRepository) GetUserByID(ctx context.Context, id string) (*models.Us
 	return &user, nil
 }
 
-func (r *userRepository) GetUserByUsername(ctx context.Context, username string) (*models.User, error) {
+func (r *SQLiteRepository) GetUserByUsername(ctx context.Context, username string) (*models.User, error) {
 	const op = "SQLite.GetUserByUsername"
 
 	query := `SELECT user_id, username, is_active, team_name FROM users WHERE username = ?`
@@ -60,7 +51,7 @@ func (r *userRepository) GetUserByUsername(ctx context.Context, username string)
 	return &user, nil
 }
 
-func (r *userRepository) SetUserActive(ctx context.Context, userID string, isActive bool) error {
+func (r *SQLiteRepository) SetUserActive(ctx context.Context, userID string, isActive bool) error {
 	const op = "SQLite.SetUserActive"
 
 	exists, err := r.UserExists(ctx, userID)
@@ -88,7 +79,7 @@ func (r *userRepository) SetUserActive(ctx context.Context, userID string, isAct
 	return nil
 }
 
-func (r *userRepository) GetPRsByReviewer(ctx context.Context, userID string) ([]*models.PullRequestShort, error) {
+func (r *SQLiteRepository) GetPRsByReviewer(ctx context.Context, userID string) ([]*models.PullRequestShort, error) {
 	const op = "SQLite.GetPRsByReviewer"
 
 	exists, err := r.UserExists(ctx, userID)
@@ -130,7 +121,7 @@ func (r *userRepository) GetPRsByReviewer(ctx context.Context, userID string) ([
 	return prs, nil
 }
 
-func (r *userRepository) GetPRsCntByAuthor(ctx context.Context, userID string) (int, error) {
+func (r *SQLiteRepository) GetPRsCntByAuthor(ctx context.Context, userID string) (int, error) {
 	const op = "SQLite.GetPRsCntByAuthor"
 
 	exists, err := r.UserExists(ctx, userID)
@@ -161,11 +152,18 @@ func (r *userRepository) GetPRsCntByAuthor(ctx context.Context, userID string) (
 	return count, nil
 }
 
-func (r *userRepository) UserExists(ctx context.Context, userID string) (bool, error) {
+func (r *SQLiteRepository) UserExists(ctx context.Context, userID string, username ...string) (bool, error) {
 	const op = "SQLite.UserExists"
 
-	query := `SELECT 1 FROM users WHERE user_id = ?`
-	row := r.db.QueryRowContext(ctx, query, userID)
+	var row *sql.Row
+
+	if len(username) > 0 {
+		query := `SELECT 1 FROM users WHERE user_id = ? OR username = ?`
+		row = r.db.QueryRowContext(ctx, query, userID, username[0])
+	} else {
+		query := `SELECT 1 FROM users WHERE user_id = ?`
+		row = r.db.QueryRowContext(ctx, query, userID)
+	}
 
 	var exists int
 	err := row.Scan(&exists)

@@ -8,26 +8,19 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-type SQLiteDatabase struct {
-	path string
-	db   *sql.DB
+type SQLiteRepository struct {
+	db *sql.DB
 }
 
-func New(storagePath string) *SQLiteDatabase {
-	return &SQLiteDatabase{
-		path: storagePath,
-	}
-}
-
-func (s *SQLiteDatabase) Init(ctx context.Context) error {
+func New(ctx context.Context, storagePath string) (*SQLiteRepository, error) {
 	const op = "SQLiteDatabase.Init"
 
-	db, err := sql.Open("sqlite", s.path)
+	db, err := sql.Open("sqlite", storagePath)
 	if err != nil {
-		return fmt.Errorf("%s: failed to open database: %w", op, err)
+		return nil, fmt.Errorf("%s: failed to open database: %w", op, err)
 	}
 
-	s.db = db
+	r := &SQLiteRepository{db: db}
 
 	queries := []string{
 		`CREATE TABLE IF NOT EXISTS teams (
@@ -67,19 +60,19 @@ func (s *SQLiteDatabase) Init(ctx context.Context) error {
 	}
 
 	for _, query := range queries {
-		if _, err := s.db.ExecContext(ctx, query); err != nil {
-			return fmt.Errorf("%s: failed to execute query %s: %w", op, query, err)
+		if _, err := r.db.ExecContext(ctx, query); err != nil {
+			return nil, fmt.Errorf("%s: failed to execute query %s: %w", op, query, err)
 		}
 	}
 
-	return nil
+	return r, nil
 }
 
-func (s *SQLiteDatabase) Close() error {
+func (r *SQLiteRepository) Close() error {
 	const op = "SQLiteDatabase.Close"
 
-	if s.db != nil {
-		err := s.db.Close()
+	if r.db != nil {
+		err := r.db.Close()
 		if err != nil {
 			return fmt.Errorf("%s: failed to close database: %w", op, err)
 		}
@@ -87,14 +80,14 @@ func (s *SQLiteDatabase) Close() error {
 	return nil
 }
 
-func (s *SQLiteDatabase) Ping(ctx context.Context) error {
+func (r *SQLiteRepository) Ping(ctx context.Context) error {
 	const op = "SQLiteDatabase.Ping"
 
-	if s.db == nil {
+	if r.db == nil {
 		return fmt.Errorf("%s: database not initialized", op)
 	}
 
-	err := s.db.PingContext(ctx)
+	err := r.db.PingContext(ctx)
 	if err != nil {
 		return fmt.Errorf("%s: failed to ping database: %w", op, err)
 	}
