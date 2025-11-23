@@ -19,8 +19,6 @@ COPY --from=builder /app/main .
 
 RUN mkdir -p /app/data && chmod 755 /app/data
 
-COPY .env-default .
-
 EXPOSE 8080
 
 CMD ["./main"]
