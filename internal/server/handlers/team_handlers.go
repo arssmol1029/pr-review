@@ -43,7 +43,7 @@ func (h *TeamHandler) Add(w http.ResponseWriter, r *http.Request) {
 	type MemberItem struct {
 		UserID   string `json:"user_id" validate:"required"`
 		Username string `json:"username" validate:"required"`
-		IsActive bool   `json:"is_active" validate:"required"`
+		IsActive bool   `json:"is_active"`
 	}
 
 	var req struct {
@@ -161,7 +161,7 @@ func (h *TeamHandler) Get(w http.ResponseWriter, r *http.Request) {
 	type MemberItem struct {
 		UserID   string `json:"user_id" validate:"required"`
 		Username string `json:"username" validate:"required"`
-		IsActive bool   `json:"is_active" validate:"required"`
+		IsActive bool   `json:"is_active"`
 	}
 
 	res := struct {

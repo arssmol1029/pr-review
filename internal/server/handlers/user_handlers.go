@@ -42,7 +42,7 @@ func (h *UserHandler) SetIsActive(w http.ResponseWriter, r *http.Request) {
 
 	var req struct {
 		UserID   string `json:"user_id" validate:"required"`
-		IsActive bool   `json:"is_active" validate:"required"`
+		IsActive bool   `json:"is_active"`
 	}
 
 	if err := render.DecodeJSON(r.Body, &req); err != nil {
@@ -78,7 +78,7 @@ func (h *UserHandler) SetIsActive(w http.ResponseWriter, r *http.Request) {
 		UserID   string `json:"user_id" validate:"required"`
 		Username string `json:"username" validate:"required"`
 		TeamName string `json:"team_name" validate:"required"`
-		IsActive bool   `json:"is_active" validate:"required"`
+		IsActive bool   `json:"is_active"`
 	}
 
 	res := struct {
