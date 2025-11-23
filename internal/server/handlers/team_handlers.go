@@ -87,6 +87,12 @@ func (h *TeamHandler) Add(w http.ResponseWriter, r *http.Request) {
 		render.JSON(w, r, response.TEAM_EXISTS())
 		return
 	}
+	if errors.Is(err, serviceErrors.ErrUserExists) {
+		log.Error("User already exists", "error", err, "team_name", team.Name)
+		render.Status(r, http.StatusBadRequest)
+		render.JSON(w, r, response.USER_EXISTS())
+		return
+	}
 	if err != nil {
 		log.Error("Failed to create team", "error", err, "team_name", team.Name)
 		render.Status(r, http.StatusInternalServerError)

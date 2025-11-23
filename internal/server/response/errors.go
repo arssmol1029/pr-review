@@ -31,6 +31,18 @@ func PR_EXISTS() *ErrorResponse {
 	}
 }
 
+func USER_EXISTS() *ErrorResponse {
+	return &ErrorResponse{
+		Error: struct {
+			Code    string `json:"code"`
+			Message string `json:"message,omitempty"`
+		}{
+			Code:    "USER_EXISTS",
+			Message: "user with this name or id already exists",
+		},
+	}
+}
+
 func PR_MERGED() *ErrorResponse {
 	return &ErrorResponse{
 		Error: struct {

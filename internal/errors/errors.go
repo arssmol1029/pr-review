@@ -11,6 +11,7 @@ var (
 	ErrPRNotFound   = errors.New("pull request not found")
 	ErrTeamExists   = errors.New("team already exists")
 	ErrPRExists     = errors.New("pull request already exists")
+	ErrUserExists   = errors.New("user with this name or id already exists")
 	ErrPRMerged     = errors.New("pull request already merged")
 	ErrNotAssigned  = errors.New("reviewer is not assigned to this PR")
 	ErrNoCandidate  = errors.New("no active replacement candidate in team")

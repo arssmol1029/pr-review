@@ -19,6 +19,16 @@ func NewTeamRepository(s *SQLiteDatabase) service.TeamRepository {
 func (r *teamRepository) CreateTeam(ctx context.Context, team *models.Team) error {
 	const op = "SQLite.CreateTeam"
 
+	for _, member := range team.Members {
+		exists, err := r.userExists(ctx, member.UserID, member.Username)
+		if err != nil {
+			return errors.WrapError(op, err)
+		}
+		if exists {
+			return errors.WrapError(op, errors.ErrUserExists)
+		}
+	}
+
 	exists, err := r.TeamExists(ctx, team.Name)
 	if err != nil {
 		return errors.WrapError(op, err)
@@ -104,6 +114,26 @@ func (r *teamRepository) TeamExists(ctx context.Context, teamName string) (bool,
 
 	query := `SELECT 1 FROM teams WHERE name = ?`
 	row := r.db.QueryRowContext(ctx, query, teamName)
+
+	var exists int
+	err := row.Scan(&exists)
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+	if err != nil {
+		return false, errors.WrapError(op, err)
+	}
+
+	return true, nil
+}
+
+// private methods
+
+func (r *teamRepository) userExists(ctx context.Context, userID, username string) (bool, error) {
+	const op = "SQLite.UserExists"
+
+	query := `SELECT 1 FROM users WHERE user_id = ? OR username = ?`
+	row := r.db.QueryRowContext(ctx, query, userID, username)
 
 	var exists int
 	err := row.Scan(&exists)
