@@ -7,7 +7,7 @@ RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/pr-review
+RUN CGO_ENABLED=0 GOOS=linux go build -o main ./cmd/pr-review
 
 FROM alpine:latest
 
